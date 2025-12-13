@@ -51,3 +51,13 @@ def deep_get(d: Dict[str, Any], path: str, default: Any) -> Any:
         cur = cur[part]
     return cur
 
+
+def deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge two dictionaries recursively without mutating inputs."""
+    result: Dict[str, Any] = dict(base)
+    for k, v in override.items():
+        if isinstance(v, dict) and isinstance(base.get(k), dict):
+            result[k] = deep_merge(base[k], v)
+        else:
+            result[k] = v
+    return result

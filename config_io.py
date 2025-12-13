@@ -28,7 +28,6 @@ def load_json_config(path: Path) -> Dict[str, Any]:
             f"File: {path}\n"
             f"Line {e.lineno}, Col {e.colno}\n"
             f"{e.msg}\n\n"
-            f"Common fix: maps must use \\n inside strings, or put maps in .txt files.\n"
+            f"Common fix: check for trailing commas. Level maps must live in .map files (no inline maps).\n"
         )
         raise SystemExit(msg)
-

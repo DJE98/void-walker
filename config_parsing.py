@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 from models import PlayerConfig, TileSpec
 from utils import as_color
@@ -24,37 +24,15 @@ def parse_player_config(raw: Dict[str, Any]) -> PlayerConfig:
     )
 
 
-def parse_levels_sources(cfg: Dict[str, Any]) -> Tuple[Dict[str, TileSpec], Dict[str, Any]]:
-    """Parse the tile legend and inline level definitions.
-
-    Accepts inline levels from:
-      - cfg["levels"]
-      - cfg["level"]
-      - cfg["legend"]["level"]
-
-    Args:
-        cfg: Root configuration dictionary.
-
-    Returns:
-        (legend, inline_levels)
-    """
-    inline_levels: Dict[str, Any] = {}
-    if isinstance(cfg.get("levels"), dict):
-        inline_levels = cfg["levels"]
-    elif isinstance(cfg.get("level"), dict):
-        inline_levels = cfg["level"]
-
+def parse_legend(cfg: Dict[str, Any]) -> Dict[str, TileSpec]:
+    """Parse the tile legend from config data."""
     legend_raw = cfg.get("legend", {})
-    if isinstance(legend_raw, dict) and isinstance(legend_raw.get("level"), dict) and not inline_levels:
-        inline_levels = legend_raw.get("level", {})
-
     legend: Dict[str, TileSpec] = {}
+
     if not isinstance(legend_raw, dict):
         legend_raw = {}
 
     for ch, raw in legend_raw.items():
-        if ch == "level":
-            continue
         if not isinstance(ch, str) or len(ch) != 1 or not isinstance(raw, dict):
             continue
 
@@ -71,5 +49,4 @@ def parse_levels_sources(cfg: Dict[str, Any]) -> Tuple[Dict[str, TileSpec], Dict
     if "." not in legend:
         legend["."] = TileSpec(char=".", shape="none", color=None, solid=False, on_collision={})
 
-    return legend, inline_levels if isinstance(inline_levels, dict) else {}
-
+    return legend

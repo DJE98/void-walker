@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import pygame
 
@@ -79,66 +79,98 @@ def build_level_from_grid(
     )
 
 
-def resolve_level_name(name: str, inline_levels: Dict[str, Any], levels_dir: Path) -> str:
-    """Resolve a level name against inline levels or .txt files (case-insensitive)."""
-    if name in inline_levels:
+def resolve_level_name(name: str, levels_dir: Path) -> str:
+    """Resolve a level name against .map files in root or a level folder (case-insensitive)."""
+    p_map = levels_dir / f"{name}.map"
+    if p_map.exists():
         return name
-    for k in inline_levels.keys():
-        if str(k).lower() == name.lower():
-            return str(k)
 
-    p = levels_dir / f"{name}.txt"
-    if p.exists():
-        return name
+    folder = levels_dir / name
+    if folder.exists() and folder.is_dir():
+        for candidate in [folder / f"{name}.map"]:
+            if candidate.exists():
+                return name
 
     if levels_dir.exists():
-        for f in levels_dir.glob("*.txt"):
+        for f in levels_dir.glob("*.map"):
             if f.stem.lower() == name.lower():
                 return f.stem
+        for entry in levels_dir.iterdir():
+            if entry.is_dir() and entry.name.lower() == name.lower():
+                # keep actual casing from disk
+                return entry.name
 
     return name
 
 
-def read_level_lines_inline(resolved_name: str, inline_levels: Dict[str, Any]) -> Optional[List[str]]:
-    """Read grid lines from inline config if present."""
-    data = inline_levels.get(resolved_name)
-    if not (isinstance(data, dict) and "map" in data):
-        return None
-    raw_map = str(data["map"])
-    return [line.rstrip("\n") for line in raw_map.splitlines() if line.strip("\r") != ""]
+def find_level_config_path(levels_dir: Path, level_name: str) -> Optional[Path]:
+    """Return the path to a per-level .json config if it exists."""
+    candidates = [
+        levels_dir / level_name / f"{level_name}.json",
+        levels_dir / level_name / "config.json",
+        levels_dir / f"{level_name}.json",
+    ]
+
+    if levels_dir.exists():
+        for entry in levels_dir.iterdir():
+            if entry.is_dir() and entry.name.lower() == level_name.lower():
+                candidates.append(entry / f"{entry.name}.json")
+                candidates.append(entry / "config.json")
+        for f in levels_dir.glob("*.json"):
+            if f.stem.lower() == level_name.lower():
+                candidates.append(f)
+
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
 
 
 def read_level_lines_file(resolved_name: str, levels_dir: Path) -> List[str]:
-    """Read grid lines from a .txt file."""
-    level_path = levels_dir / f"{resolved_name}.txt"
-    if not level_path.exists():
-        raise FileNotFoundError(
-            f"Level '{resolved_name}' not found.\n"
-            f"- Looked for inline cfg['levels']['{resolved_name}']['map']\n"
-            f"- Looked for file: {level_path}"
+    """Read grid lines from a map file, preferring a level folder if present."""
+    candidates = []
+    folder = levels_dir / resolved_name
+    if folder.exists() and folder.is_dir():
+        candidates.extend(
+            [
+                folder / f"{resolved_name}.map",
+            ]
+            + list(folder.glob("*.map"))
         )
-    return [line.rstrip("\n") for line in level_path.read_text(encoding="utf-8").splitlines()]
+    candidates.append(levels_dir / f"{resolved_name}.map")
+
+    seen = set()
+    for candidate in candidates:
+        if not isinstance(candidate, Path):
+            continue
+        key = candidate.resolve() if candidate.exists() else candidate
+        if key in seen:
+            continue
+        seen.add(key)
+        if candidate.exists():
+            return [line.rstrip("\n") for line in candidate.read_text(encoding="utf-8").splitlines()]
+
+    raise FileNotFoundError(
+        f"Level '{resolved_name}' not found.\n"
+        f"- Looked for {resolved_name}.map inside {folder}\n"
+        f"- Looked for file: {levels_dir / f'{resolved_name}.map'}"
+    )
 
 
-def read_level_lines(resolved_name: str, inline_levels: Dict[str, Any], levels_dir: Path) -> List[str]:
-    """Read grid lines either from inline map or file."""
-    inline = read_level_lines_inline(resolved_name, inline_levels)
-    if inline is not None and inline is not "":
-        return inline
+def read_level_lines(resolved_name: str, levels_dir: Path) -> List[str]:
+    """Read grid lines from a level file."""
     return read_level_lines_file(resolved_name, levels_dir)
 
 
 def load_level(
     name: str,
-    inline_levels: Dict[str, Any],
     levels_dir: Path,
     legend: Dict[str, TileSpec],
     tile_size: int,
 ) -> Level:
-    """Load a level by name from inline config or disk."""
-    resolved = resolve_level_name(name, inline_levels, levels_dir)
-    grid_lines = read_level_lines(resolved, inline_levels, levels_dir)
+    """Load a level by name from disk."""
+    resolved = resolve_level_name(name, levels_dir)
+    grid_lines = read_level_lines(resolved, levels_dir)
     if not grid_lines:
         raise ValueError(f"Level '{resolved}' is empty.")
     return build_level_from_grid(resolved, grid_lines, legend, tile_size)
-

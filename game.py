@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import pygame
 
 from camera import update_camera
 from config_io import load_json_config
-from config_parsing import parse_levels_sources, parse_player_config
-from level_loader import load_level
-from models import Level, TileSpec, TriggerTile
+from config_parsing import parse_legend, parse_player_config
+from level_loader import find_level_config_path, load_level, resolve_level_name
+from models import Level, TriggerTile
 from player import Player
 from rendering import render_frame
-from utils import as_color, deep_get
+from utils import as_color, deep_get, deep_merge
 
 
 class Game:
@@ -20,26 +20,22 @@ class Game:
 
     def __init__(self, cfg_path: Path) -> None:
         self.cfg_path = cfg_path
-        self.cfg = load_json_config(cfg_path)
+        self.base_cfg = load_json_config(cfg_path)
 
-        self.tile_size = int(self.cfg.get("tile_size", 48))
-        self.window_w = int(deep_get(self.cfg, "window.width", 1000))
-        self.window_h = int(deep_get(self.cfg, "window.height", 600))
-        self.title = str(deep_get(self.cfg, "window.title", "ASCII Side-Scroller"))
-        self.bg = as_color(deep_get(self.cfg, "window.bg", [18, 20, 28]), (18, 20, 28))
-        self.grid_color = as_color(deep_get(self.cfg, "window.grid", [126, 126, 126]), (126, 126, 126))
-        self.show_grid = bool(deep_get(self.cfg, "render.show_grid", False))
+        self.levels_dir = Path(self.base_cfg.get("levels_dir", "levels"))
 
-        self.levels_dir = Path(self.cfg.get("levels_dir", "levels"))
-        self.legend, self.inline_levels = parse_levels_sources(self.cfg)
-
-        self.current_level_name = str(self.cfg.get("currentLevel", "Level1"))
+        self.current_level_name = str(self.base_cfg.get("currentLevel", "Level1"))
         self.pending_level_name: Optional[str] = None
+        self.active_cfg: Dict[str, Any] = {}
+
+        resolved, merged_cfg = self._merged_level_config(self.current_level_name)
+        self.current_level_name = resolved
+        self._apply_active_config(merged_cfg, is_initial=True)
 
         self._init_pygame()
         self._init_ui()
 
-        self.level = self._load_level(self.current_level_name)
+        self.level = self._build_level_from_active_cfg()
         self.player = self._create_player(self.level)
 
         self.camera = pygame.Vector2(0, 0)
@@ -59,9 +55,43 @@ class Game:
         """Initialize UI resources."""
         self.font = pygame.font.Font(None, 28)
 
+    def _merged_level_config(self, name: str) -> Tuple[str, Dict[str, Any]]:
+        """Return (resolved_name, merged_cfg) with level config overlaid on base config."""
+        resolved = resolve_level_name(name, self.levels_dir)
+        level_cfg_override: Dict[str, Any] = {}
+        cfg_path = find_level_config_path(self.levels_dir, resolved)
+        if cfg_path:
+            level_cfg_override = load_json_config(cfg_path)
+        merged_cfg = deep_merge(self.base_cfg, level_cfg_override)
+        return resolved, merged_cfg
+
+    def _apply_active_config(self, cfg: Dict[str, Any], is_initial: bool = False) -> None:
+        """Apply merged config for the current level."""
+        self.active_cfg = cfg
+        self.tile_size = int(cfg.get("tile_size", 48))
+        self.legend = parse_legend(cfg)
+
+        if is_initial:
+            self.window_w = int(deep_get(cfg, "window.width", 1000))
+            self.window_h = int(deep_get(cfg, "window.height", 600))
+            self.title = str(deep_get(cfg, "window.title", "ASCII Side-Scroller"))
+
+        self.bg = as_color(deep_get(cfg, "window.bg", [18, 20, 28]), (18, 20, 28))
+        self.grid_color = as_color(deep_get(cfg, "window.grid", [126, 126, 126]), (126, 126, 126))
+        self.show_grid = bool(deep_get(cfg, "render.show_grid", False))
+
+    def _build_level_from_active_cfg(self) -> Level:
+        """Build a level using the currently applied config."""
+        return load_level(
+            name=self.current_level_name,
+            levels_dir=self.levels_dir,
+            legend=self.legend,
+            tile_size=self.tile_size,
+        )
+
     def _create_player(self, level: Level) -> Player:
         """Create a player using config and level spawn."""
-        pconf = parse_player_config(self.cfg.get("player", {}))
+        pconf = parse_player_config(self.active_cfg.get("player", {}))
         return Player(pconf, level.spawn_px, self.tile_size)
 
     # ----------------------------
@@ -69,19 +99,16 @@ class Game:
     # ----------------------------
 
     def _load_level(self, name: str) -> Level:
-        """Load a level via inline config or disk."""
-        return load_level(
-            name=name,
-            inline_levels=self.inline_levels,
-            levels_dir=self.levels_dir,
-            legend=self.legend,
-            tile_size=self.tile_size,
-        )
+        """Load a level from disk applying any level-specific config."""
+        resolved, merged_cfg = self._merged_level_config(name)
+        self.current_level_name = resolved
+        self._apply_active_config(merged_cfg)
+        return self._build_level_from_active_cfg()
 
     def _switch_to_level(self, name: str) -> None:
         """Switch to a level and respawn the player."""
         self.level = self._load_level(name)
-        self.player.respawn(self.level.spawn_px)
+        self.player = self._create_player(self.level)
 
     # ----------------------------
     # Patching / triggers
@@ -206,4 +233,3 @@ class Game:
             )
 
         pygame.quit()
-
