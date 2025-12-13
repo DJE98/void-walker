@@ -1,0 +1,41 @@
+{
+  "tile_size": 48,
+  "window": {
+    "width": 1000,
+    "height": 600,
+    "title": "Make Mistakes Permanent",
+    "bg": [18, 20, 28],
+    "grid": [126, 126, 126]
+  },
+  "render": { "show_grid": false },
+  "player": {
+    "color": [235, 240, 255],
+    "speed": 260,
+    "jump_strength": 560,
+    "gravity": 1700,
+    "max_fall": 1000,
+    "alive": true
+  },
+  "currentLevel": "Level1",
+  "legend": {
+    ".": { "shape": "none", "solid": false },
+    "#": { "shape": "rect", "color": [85, 90, 105], "solid": true },
+    "=": { "shape": "rect", "color": [110, 115, 135], "solid": true },
+    "S": { "shape": "rect", "color": [50, 100, 110], "solid": false },
+    "G": {
+      "shape": "circle",
+      "color": [255, 214, 90],
+      "solid": false,
+      "on_collision": { "currentLevel": "Level1" }
+    },
+    "^": {
+      "shape": "triangle",
+      "color": [230, 80, 95],
+      "solid": false,
+      "on_collision": { "player": { "alive": true } }
+    }
+  },
+  "levels": {
+  }
+}
+

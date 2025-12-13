@@ -1,0 +1,15 @@
+{
+  "tile_size": 44,
+  "window": {
+    "bg": [14, 18, 30]
+  },
+  "render": { "show_grid": true },
+  "player": {
+    "color": [210, 230, 255],
+    "jump_strength": 600
+  },
+  "legend": {
+    "G": { "color": [255, 190, 60] },
+    "^": { "color": [250, 110, 120] }
+  }
+}
