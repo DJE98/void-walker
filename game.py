@@ -111,8 +111,6 @@ class Game:
             mode = "flat"
 
         self.render_mode = mode
-        self.ascii_text_mode = mode == "ascii"
-        self.gradient_mode = mode == "gradient"
 
     def _init_music(self) -> None:
         """Initialize music controller and start playback."""
@@ -269,8 +267,6 @@ class Game:
             idx = 0
         nxt = order[(idx + 1) % len(order)]
         self.render_mode = nxt
-        self.ascii_text_mode = nxt == "ascii"
-        self.gradient_mode = nxt == "gradient"
 
     def _handle_events(self) -> bool:
         """Process pygame events.
@@ -309,9 +305,8 @@ class Game:
                 show_grid=self.show_grid,
                 grid_color=self.grid_color,
                 font=self.font,
-                ascii_text_mode=self.ascii_text_mode,
+                render_mode=self.render_mode,
                 tile_font=self.tile_font,
-                gradient_mode=self.gradient_mode,
             )
 
         pygame.quit()
