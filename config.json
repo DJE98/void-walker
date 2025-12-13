@@ -26,7 +26,7 @@
     ],
     "speed": 260,
     "jump_strength": 560,
-    "gravity": 1700,
+    "gravity": [0, 1700],
     "max_fall": 1000,
     "alive": true
   },

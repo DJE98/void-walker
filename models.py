@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pygame
 
@@ -39,6 +39,5 @@ class PlayerConfig:
     color: Color
     speed: float
     jump_strength: float
-    gravity: float
+    gravity: Tuple[float, float]
     max_fall: float
-

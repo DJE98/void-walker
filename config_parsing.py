@@ -1,9 +1,27 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 from models import PlayerConfig, TileSpec
 from utils import as_color
+
+
+def _parse_gravity(raw_gravity: Any) -> Tuple[float, float]:
+    """Parse gravity into (gx, gy)."""
+    default = (0.0, 1700.0)
+
+    if isinstance(raw_gravity, (list, tuple)) and len(raw_gravity) >= 2:
+        return float(raw_gravity[0]), float(raw_gravity[1])
+
+    if isinstance(raw_gravity, dict):
+        gx = raw_gravity.get("x", raw_gravity.get("gx", 0.0))
+        gy = raw_gravity.get("y", raw_gravity.get("gy", 1700.0))
+        return float(gx), float(gy)
+
+    if raw_gravity is not None:
+        return 0.0, float(raw_gravity)
+
+    return default
 
 
 def parse_player_config(raw: Dict[str, Any]) -> PlayerConfig:
@@ -19,7 +37,7 @@ def parse_player_config(raw: Dict[str, Any]) -> PlayerConfig:
         color=as_color(raw.get("color", [235, 240, 255]), (235, 240, 255)),
         speed=float(raw.get("speed", 260)),
         jump_strength=float(raw.get("jump_strength", 560)),
-        gravity=float(raw.get("gravity", 1700)),
+        gravity=_parse_gravity(raw.get("gravity")),
         max_fall=float(raw.get("max_fall", 1000)),
     )
 

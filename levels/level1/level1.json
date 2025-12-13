@@ -6,7 +6,8 @@
   "render": { "show_grid": true },
   "player": {
     "color": [210, 230, 255],
-    "jump_strength": 600
+    "jump_strength": 600,
+    "gravity": [120, 1550]
   },
   "legend": {
     "G": { "color": [255, 190, 60] },
