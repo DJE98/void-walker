@@ -21,6 +21,7 @@ The player moves left/right, jumps under gravity, **collides with solid tiles**,
 - **Jump (↑ or W or Space)**: only when grounded on a solid tile
 - **R**: restart current level (respawn at `S`)
 - **ESC**: quit
+- **T**: toggle rendering between colored shapes and ASCII text glyphs
 - **F**: fire a fireball (if `fireball` upgrade enabled)
 - **Shift**:
   - run faster (if `speed` upgrade affects “run mode”), or
@@ -51,6 +52,7 @@ The player moves left/right, jumps under gravity, **collides with solid tiles**,
 ### Key sections
 - `tile_size`: pixel size of a tile
 - `window`: width/height/title/bg/grid color
+- `render`: rendering tweaks (`show_grid`, `ascii_text_mode`)
 - `player`: default movement/physics (speed, jump_strength, gravity, max_fall)
 - `currentLevel`: starting level name
 - `legend`: tile definitions (the “rules engine”)

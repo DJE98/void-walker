@@ -3,7 +3,7 @@
   "window": {
     "bg": [14, 18, 30]
   },
-  "render": { "show_grid": true },
+  "render": { "show_grid": true, "ascii_text_mode": true },
   "player": {
     "color": [210, 230, 255],
     "jump_strength": 600,

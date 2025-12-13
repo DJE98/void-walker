@@ -46,8 +46,21 @@ def draw_tile(
     world_rect: pygame.Rect,
     camera: pygame.Vector2,
     tile_size: int,
+    ascii_text_mode: bool,
+    tile_font: pygame.font.Font,
 ) -> None:
     """Draw a single tile based on its TileSpec."""
+    if ascii_text_mode:
+        if spec.shape == "none" and spec.char == ".":
+            return
+
+        screen_rect = world_to_screen(world_rect, camera)
+        color = spec.color if spec.color is not None else (220, 220, 235)
+        glyph = spec.char if spec.char else "?"
+        text = tile_font.render(glyph, True, color)
+        surf.blit(text, text.get_rect(center=screen_rect.center))
+        return
+
     if spec.shape == "none" or spec.color is None:
         return
 
@@ -81,13 +94,15 @@ def draw_level_tiles(
     window_w: int,
     window_h: int,
     tile_size: int,
+    ascii_text_mode: bool,
+    tile_font: pygame.font.Font,
 ) -> None:
     """Draw all visible tiles for the current level."""
     ts = tile_size
     for x, y, ch in iter_visible_tiles(level, camera, window_w, window_h, tile_size):
         spec = legend.get(ch, legend["."])
         world_rect = pygame.Rect(x * ts, y * ts, ts, ts)
-        draw_tile(surf, spec, world_rect, camera, tile_size)
+        draw_tile(surf, spec, world_rect, camera, tile_size, ascii_text_mode, tile_font)
 
 
 def draw_player(surf: pygame.Surface, player: Player, camera: pygame.Vector2) -> None:
@@ -136,9 +151,14 @@ def draw_hud(
     font: pygame.font.Font,
     level_name: str,
     player_alive: bool,
+    ascii_text_mode: bool,
 ) -> None:
     """Draw HUD text."""
-    txt = f"Level: {level_name} | Alive: {player_alive} | R: restart | ESC: quit"
+    mode_label = "ASCII" if ascii_text_mode else "Shapes"
+    txt = (
+        f"Level: {level_name} | Alive: {player_alive} | Mode: {mode_label} "
+        "| T: toggle mode | R: restart | ESC: quit"
+    )
     surf.blit(font.render(txt, True, (220, 220, 235)), (12, 10))
     if not player_alive:
         surf.blit(font.render("You died! Press R.", True, (255, 120, 120)), (12, 40))
@@ -157,12 +177,23 @@ def render_frame(
     show_grid: bool,
     grid_color: Color,
     font: pygame.font.Font,
+    ascii_text_mode: bool,
+    tile_font: pygame.font.Font,
 ) -> None:
     """Render and present a full frame."""
     screen.fill(bg)
-    draw_level_tiles(screen, level, legend, camera, window_w, window_h, tile_size)
+    draw_level_tiles(
+        screen,
+        level,
+        legend,
+        camera,
+        window_w,
+        window_h,
+        tile_size,
+        ascii_text_mode,
+        tile_font,
+    )
     draw_player(screen, player, camera)
     draw_grid(screen, show_grid, camera, window_w, window_h, tile_size, grid_color)
-    draw_hud(screen, font, level.name, player.alive)
+    draw_hud(screen, font, level.name, player.alive, ascii_text_mode)
     pygame.display.flip()
-

@@ -51,9 +51,15 @@ class Game:
         pygame.display.set_caption(self.title)
         self.clock = pygame.time.Clock()
 
+    def _update_tile_font(self) -> None:
+        """Create/update the font used for ASCII tile rendering."""
+        size = max(12, int(self.tile_size * 0.7))
+        self.tile_font = pygame.font.SysFont("monospace", size)
+
     def _init_ui(self) -> None:
         """Initialize UI resources."""
         self.font = pygame.font.Font(None, 28)
+        self._update_tile_font()
 
     def _merged_level_config(self, name: str) -> Tuple[str, Dict[str, Any]]:
         """Return (resolved_name, merged_cfg) with level config overlaid on base config."""
@@ -70,6 +76,7 @@ class Game:
         self.active_cfg = cfg
         self.tile_size = int(cfg.get("tile_size", 48))
         self.legend = parse_legend(cfg)
+        self.ascii_text_mode = bool(deep_get(cfg, "render.ascii_text_mode", False))
 
         if is_initial:
             self.window_w = int(deep_get(cfg, "window.width", 1000))
@@ -79,6 +86,8 @@ class Game:
         self.bg = as_color(deep_get(cfg, "window.bg", [18, 20, 28]), (18, 20, 28))
         self.grid_color = as_color(deep_get(cfg, "window.grid", [126, 126, 126]), (126, 126, 126))
         self.show_grid = bool(deep_get(cfg, "render.show_grid", False))
+        if hasattr(self, "tile_font"):
+            self._update_tile_font()
 
     def _build_level_from_active_cfg(self) -> Level:
         """Build a level using the currently applied config."""
@@ -191,6 +200,8 @@ class Game:
             return False
         if key == pygame.K_r:
             self.restart_level()
+        if key == pygame.K_t:
+            self.ascii_text_mode = not self.ascii_text_mode
         return True
 
     def _handle_events(self) -> bool:
@@ -230,6 +241,8 @@ class Game:
                 show_grid=self.show_grid,
                 grid_color=self.grid_color,
                 font=self.font,
+                ascii_text_mode=self.ascii_text_mode,
+                tile_font=self.tile_font,
             )
 
         pygame.quit()

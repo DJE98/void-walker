@@ -16,7 +16,8 @@
     ]
   },
   "render": {
-    "show_grid": false
+    "show_grid": false,
+    "ascii_text_mode": false
   },
   "player": {
     "color": [
