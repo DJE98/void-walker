@@ -1,17 +1,14 @@
 {
-  "currentLevel": "Level2",
+  "player": {
+    "gravity": [-150, 900]
+  },
+  "render": { "mode": "gradient", "color": "multicolor" },
+  "music": {
+    "playlist": ["steady-rap-beat-20231220-182861.mp3"],
+    "bitcrusher": { "bits": 16, "sample_rate": 18000 }
+  },
   "legend": {
-    "G": {
-      "shape": "circle",
-      "color": [
-        255,
-        214,
-        90
-      ],
-      "solid": false,
-      "on_collision": {
-        "currentLevel": "Level3"
-      }
-    }
+    "S": { "color": [70, 200, 110] },
+    "^": { "on_collision": { "player": { "alive": true } } }
   }
 }

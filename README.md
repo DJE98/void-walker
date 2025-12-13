@@ -37,6 +37,8 @@ Retro‑futuristic, hostile, playful in presentation, ruthless in consequence. T
 - **Jump (↑ or W or Space)**: only when grounded on a solid tile
 - **R**: restart current level (respawn at `S`)
 - **ESC**: quit
+- **T**: cycle render modes (ASCII → Flat Color → Gradient)
+- **C**: toggle render color mode (Multicolor ↔ Gray) — shown in the HUD
 - **F**: fire a fireball (if `fireball` upgrade enabled)
 - **Shift**:
   - run faster (if `speed` upgrade affects “run mode”), or
@@ -67,9 +69,19 @@ Retro‑futuristic, hostile, playful in presentation, ruthless in consequence. T
 ### Key sections
 - `tile_size`: pixel size of a tile
 - `window`: width/height/title/bg/grid color
+- `render`: rendering tweaks
+  - `show_grid`: enable grid overlay
+  - `mode`: `"ascii" | "flat" | "gradient"` (per-level override supported); runtime toggle via `T`
+  - `color`: `"multicolor" | "gray"` (per-level override supported); runtime toggle via `C`
 - `player`: default movement/physics (speed, jump_strength, gravity, max_fall)
 - `currentLevel`: starting level name
 - `legend`: tile definitions (the “rules engine”)
+- `music`:
+  - `dir`: folder containing background tracks (defaults to `music`)
+  - `playlist`: list of track filenames to loop as the global soundtrack
+  - `fade_ms`: fade duration when switching playlists/levels
+  - `bitcrusher`: optional lo-fi mixer settings for background music (e.g. `{"bits": 8, "sample_rate": 12000}`); providing this block enables it and omitting the block disables it
+  - Levels can provide their own `music.playlist` (and optional `music.bitcrusher`) in `levels/<name>/<name>.json`; level playlists override the global playlist, and the global playlist is used when no level playlist is defined.
 
 ### Legend rules (tile definitions)
 Each tile character maps to:

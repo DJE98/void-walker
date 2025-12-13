@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import pygame
 
@@ -10,9 +10,11 @@ from config_io import load_json_config
 from config_parsing import parse_legend, parse_player_config
 from level_loader import find_level_config_path, load_level, resolve_level_name
 from models import Level, TriggerTile
+from music_controller import MusicController
 from player import Player
 from rendering import render_frame
-from utils import as_color, deep_get, deep_merge
+from utils import apply_color_mode, as_color, deep_get, deep_merge
+from game_types import Color
 
 
 class Game:
@@ -28,12 +30,14 @@ class Game:
         self.pending_level_name: Optional[str] = None
         self.active_cfg: Dict[str, Any] = {}
 
-        resolved, merged_cfg = self._merged_level_config(self.current_level_name)
+        resolved, merged_cfg, level_cfg_override = self._merged_level_config(self.current_level_name)
         self.current_level_name = resolved
+        self.current_level_override = level_cfg_override
         self._apply_active_config(merged_cfg, is_initial=True)
 
         self._init_pygame()
         self._init_ui()
+        self._init_music()
 
         self.level = self._build_level_from_active_cfg()
         self.player = self._create_player(self.level)
@@ -51,34 +55,127 @@ class Game:
         pygame.display.set_caption(self.title)
         self.clock = pygame.time.Clock()
 
+    def _update_tile_font(self) -> None:
+        """Create/update the font used for ASCII tile rendering."""
+        size = max(12, int(self.tile_size * 0.7))
+        self.tile_font = pygame.font.SysFont("monospace", size)
+
     def _init_ui(self) -> None:
         """Initialize UI resources."""
         self.font = pygame.font.Font(None, 28)
+        self._update_tile_font()
 
-    def _merged_level_config(self, name: str) -> Tuple[str, Dict[str, Any]]:
-        """Return (resolved_name, merged_cfg) with level config overlaid on base config."""
+    def _merged_level_config(self, name: str) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
+        """Return (resolved_name, merged_cfg, override_cfg) with level config overlaid on base config."""
         resolved = resolve_level_name(name, self.levels_dir)
         level_cfg_override: Dict[str, Any] = {}
         cfg_path = find_level_config_path(self.levels_dir, resolved)
         if cfg_path:
             level_cfg_override = load_json_config(cfg_path)
         merged_cfg = deep_merge(self.base_cfg, level_cfg_override)
-        return resolved, merged_cfg
+        return resolved, merged_cfg, level_cfg_override
 
     def _apply_active_config(self, cfg: Dict[str, Any], is_initial: bool = False) -> None:
         """Apply merged config for the current level."""
         self.active_cfg = cfg
         self.tile_size = int(cfg.get("tile_size", 48))
-        self.legend = parse_legend(cfg)
+        self.color_mode = self._parse_color_mode(cfg)
+        self._apply_render_mode(cfg)
 
         if is_initial:
             self.window_w = int(deep_get(cfg, "window.width", 1000))
             self.window_h = int(deep_get(cfg, "window.height", 600))
             self.title = str(deep_get(cfg, "window.title", "ASCII Side-Scroller"))
 
-        self.bg = as_color(deep_get(cfg, "window.bg", [18, 20, 28]), (18, 20, 28))
-        self.grid_color = as_color(deep_get(cfg, "window.grid", [126, 126, 126]), (126, 126, 126))
         self.show_grid = bool(deep_get(cfg, "render.show_grid", False))
+        self._refresh_colors()
+        if hasattr(self, "tile_font"):
+            self._update_tile_font()
+
+    def _apply_render_mode(self, cfg: Dict[str, Any]) -> None:
+        """Apply render mode string with backward compatibility for old flags."""
+        mode_raw = deep_get(cfg, "render.mode", None)
+        ascii_flag = bool(deep_get(cfg, "render.ascii_text_mode", False))
+        gradient_flag = bool(deep_get(cfg, "render.gradient_mode", False))
+
+        if isinstance(mode_raw, str):
+            mode = mode_raw.lower()
+        elif ascii_flag:
+            mode = "ascii"
+        elif gradient_flag:
+            mode = "gradient"
+        else:
+            mode = "flat"
+
+        if mode not in ("ascii", "flat", "gradient"):
+            mode = "flat"
+
+        self.render_mode = mode
+
+    def _parse_color_mode(self, cfg: Dict[str, Any]) -> str:
+        """Return the configured color mode (multicolor|gray)."""
+        color_mode = deep_get(cfg, "render.color", "multicolor")
+        if isinstance(color_mode, str):
+            color_mode = color_mode.lower()
+        else:
+            color_mode = "multicolor"
+        if color_mode not in ("multicolor", "gray"):
+            color_mode = "multicolor"
+        return color_mode
+
+    def _apply_color_mode(self, color: Color) -> Color:
+        """Transform a color according to the current color mode."""
+        return apply_color_mode(color, self.color_mode)
+
+    def _refresh_colors(self) -> None:
+        """Recompute colorized resources for the current color mode."""
+        self.legend = parse_legend(self.active_cfg, self.color_mode)
+        base_bg = as_color(deep_get(self.active_cfg, "window.bg", [18, 20, 28]), (18, 20, 28))
+        self.bg = self._apply_color_mode(base_bg)
+        base_grid = as_color(deep_get(self.active_cfg, "window.grid", [126, 126, 126]), (126, 126, 126))
+        self.grid_color = self._apply_color_mode(base_grid)
+
+        if hasattr(self, "player"):
+            base_player_color = as_color(
+                deep_get(self.active_cfg, "player.color", [235, 240, 255]),
+                (235, 240, 255),
+            )
+            self.player.cfg.color = self._apply_color_mode(base_player_color)
+
+    def _init_music(self) -> None:
+        """Initialize music controller and start playback."""
+        music_dir = Path(deep_get(self.base_cfg, "music.dir", "music"))
+        fade_ms = int(deep_get(self.base_cfg, "music.fade_ms", 800))
+        bitcrusher_cfg = deep_get(self.active_cfg, "music.bitcrusher", None)
+        self.music_controller = MusicController(music_dir, fade_ms, bitcrusher_cfg)
+        self._update_music_playlist()
+
+    def _select_playlist(self) -> List[str]:
+        """Pick the playlist for the active level (level overrides global)."""
+        level_playlist = deep_get(self.current_level_override, "music.playlist", None)
+        if isinstance(level_playlist, list) and len(level_playlist) > 0:
+            return [str(track) for track in level_playlist if isinstance(track, str)]
+
+        global_playlist = deep_get(self.base_cfg, "music.playlist", [])
+        if isinstance(global_playlist, list):
+            return [str(track) for track in global_playlist if isinstance(track, str)]
+        return []
+
+    def _update_music_playlist(self) -> None:
+        """Update music playback to match the active level playlist."""
+        if hasattr(self, "music_controller"):
+            self.music_controller.set_playlist(self._select_playlist())
+
+    def _update_music_settings(self) -> None:
+        """Apply music-related settings that depend on the active config."""
+        if hasattr(self, "music_controller"):
+            bitcrusher_cfg = deep_get(self.active_cfg, "music.bitcrusher", None)
+            self.music_controller.set_bitcrusher(bitcrusher_cfg)
+
+    def _update_music(self) -> None:
+        """Tick music controller (advance songs when needed)."""
+        if hasattr(self, "music_controller"):
+            self.music_controller.update()
 
     def _build_level_from_active_cfg(self) -> Level:
         """Build a level using the currently applied config."""
@@ -91,7 +188,7 @@ class Game:
 
     def _create_player(self, level: Level) -> Player:
         """Create a player using config and level spawn."""
-        pconf = parse_player_config(self.active_cfg.get("player", {}))
+        pconf = parse_player_config(self.active_cfg.get("player", {}), color_mode=self.color_mode)
         return Player(pconf, level.spawn_px, self.tile_size)
 
     # ----------------------------
@@ -100,8 +197,9 @@ class Game:
 
     def _load_level(self, name: str) -> Level:
         """Load a level from disk applying any level-specific config."""
-        resolved, merged_cfg = self._merged_level_config(name)
+        resolved, merged_cfg, level_cfg_override = self._merged_level_config(name)
         self.current_level_name = resolved
+        self.current_level_override = level_cfg_override
         self._apply_active_config(merged_cfg)
         return self._build_level_from_active_cfg()
 
@@ -109,6 +207,8 @@ class Game:
         """Switch to a level and respawn the player."""
         self.level = self._load_level(name)
         self.player = self._create_player(self.level)
+        self._update_music_settings()
+        self._update_music_playlist()
 
     # ----------------------------
     # Patching / triggers
@@ -164,6 +264,7 @@ class Game:
         self.handle_triggers()
         self._apply_fall_death()
         self.switch_level_if_needed()
+        self._update_music()
         update_camera(
             camera=self.camera,
             level=self.level,
@@ -191,7 +292,26 @@ class Game:
             return False
         if key == pygame.K_r:
             self.restart_level()
+        if key == pygame.K_t:
+            self._toggle_render_mode()
+        if key == pygame.K_c:
+            self._toggle_color_mode()
         return True
+
+    def _toggle_render_mode(self) -> None:
+        """Cycle render mode between ascii -> flat -> gradient."""
+        order = ["ascii", "flat", "gradient"]
+        try:
+            idx = order.index(self.render_mode)
+        except ValueError:
+            idx = 0
+        nxt = order[(idx + 1) % len(order)]
+        self.render_mode = nxt
+
+    def _toggle_color_mode(self) -> None:
+        """Toggle render color mode between multicolor and gray."""
+        self.color_mode = "gray" if self.color_mode == "multicolor" else "multicolor"
+        self._refresh_colors()
 
     def _handle_events(self) -> bool:
         """Process pygame events.
@@ -230,6 +350,9 @@ class Game:
                 show_grid=self.show_grid,
                 grid_color=self.grid_color,
                 font=self.font,
+                render_mode=self.render_mode,
+                tile_font=self.tile_font,
+                color_mode=self.color_mode,
             )
 
         pygame.quit()

@@ -1,30 +1,51 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 from models import PlayerConfig, TileSpec
-from utils import as_color
+from utils import apply_color_mode, as_color
 
 
-def parse_player_config(raw: Dict[str, Any]) -> PlayerConfig:
+def _parse_gravity(raw_gravity: Any) -> Tuple[float, float]:
+    """Parse gravity into (gx, gy)."""
+    default = (0.0, 1700.0)
+
+    if isinstance(raw_gravity, (list, tuple)) and len(raw_gravity) >= 2:
+        return float(raw_gravity[0]), float(raw_gravity[1])
+
+    if isinstance(raw_gravity, dict):
+        gx = raw_gravity.get("x", raw_gravity.get("gx", 0.0))
+        gy = raw_gravity.get("y", raw_gravity.get("gy", 1700.0))
+        return float(gx), float(gy)
+
+    if raw_gravity is not None:
+        return 0.0, float(raw_gravity)
+
+    return default
+
+
+def parse_player_config(raw: Dict[str, Any], color_mode: str = "multicolor") -> PlayerConfig:
     """Parse player settings from config data.
 
     Args:
         raw: Dict containing player settings.
+        color_mode: Color rendering mode (multicolor|gray).
 
     Returns:
         PlayerConfig with defaults applied.
     """
+    color = as_color(raw.get("color", [235, 240, 255]), (235, 240, 255))
+    color = apply_color_mode(color, color_mode)
     return PlayerConfig(
-        color=as_color(raw.get("color", [235, 240, 255]), (235, 240, 255)),
+        color=color,
         speed=float(raw.get("speed", 260)),
         jump_strength=float(raw.get("jump_strength", 560)),
-        gravity=float(raw.get("gravity", 1700)),
+        gravity=_parse_gravity(raw.get("gravity")),
         max_fall=float(raw.get("max_fall", 1000)),
     )
 
 
-def parse_legend(cfg: Dict[str, Any]) -> Dict[str, TileSpec]:
+def parse_legend(cfg: Dict[str, Any], color_mode: str = "multicolor") -> Dict[str, TileSpec]:
     """Parse the tile legend from config data."""
     legend_raw = cfg.get("legend", {})
     legend: Dict[str, TileSpec] = {}
@@ -38,7 +59,8 @@ def parse_legend(cfg: Dict[str, Any]) -> Dict[str, TileSpec]:
 
         shape = str(raw.get("shape", "none")).lower()
         solid = bool(raw.get("solid", False))
-        color = None if shape == "none" else as_color(raw.get("color"), (200, 60, 220))
+        base_color = None if shape == "none" else as_color(raw.get("color"), (200, 60, 220))
+        color = apply_color_mode(base_color, color_mode) if base_color is not None else None
 
         on_col = raw.get("on_collision", {})
         if not isinstance(on_col, dict):

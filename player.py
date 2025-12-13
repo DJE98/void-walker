@@ -49,9 +49,19 @@ class Player:
         if "jump_strength" in patch:
             self.cfg.jump_strength = float(patch["jump_strength"])
         if "gravity" in patch:
-            self.cfg.gravity = float(patch["gravity"])
+            self.cfg.gravity = self._parse_gravity_patch(patch["gravity"])
         if "max_fall" in patch:
             self.cfg.max_fall = float(patch["max_fall"])
+
+    def _parse_gravity_patch(self, val: Any) -> tuple[float, float]:
+        """Parse gravity patch supporting scalar, list/tuple, or dict."""
+        if isinstance(val, (list, tuple)) and len(val) >= 2:
+            return float(val[0]), float(val[1])
+        if isinstance(val, dict):
+            gx = val.get("x", val.get("gx", self.cfg.gravity[0]))
+            gy = val.get("y", val.get("gy", self.cfg.gravity[1]))
+            return float(gx), float(gy)
+        return (self.cfg.gravity[0], float(val))
 
     def update(self, dt: float, keys: pygame.key.ScancodeWrapper, solids: List[pygame.Rect]) -> None:
         """Advance the player simulation by dt.
@@ -72,13 +82,16 @@ class Player:
         self._move_and_resolve_y(dt, solids)
 
     def _update_horizontal_velocity(self, keys: pygame.key.ScancodeWrapper) -> None:
-        """Update horizontal velocity from input."""
+        """Update horizontal velocity from input while keeping gravity influence."""
         move_dir = 0.0
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             move_dir -= 1.0
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             move_dir += 1.0
-        self.vel.x = move_dir * self.cfg.speed
+        if move_dir != 0.0:
+            self.vel.x = move_dir * self.cfg.speed
+        elif self.cfg.gravity[0] == 0.0:
+            self.vel.x = 0.0
 
     def _try_jump(self, keys: pygame.key.ScancodeWrapper) -> None:
         """Apply an instantaneous jump if pressed and grounded."""
@@ -88,9 +101,11 @@ class Player:
             self.on_ground = False
 
     def _apply_gravity(self, dt: float) -> None:
-        """Apply gravity and clamp terminal velocity."""
-        self.vel.y += self.cfg.gravity * dt
-        self.vel.y = clamp_float(self.vel.y, -99999.0, self.cfg.max_fall)
+        """Apply gravity on both axes and clamp terminal velocity on Y."""
+        gx, gy = self.cfg.gravity
+        self.vel.x += gx * dt
+        self.vel.y += gy * dt
+        self.vel.y = clamp_float(self.vel.y, -self.cfg.max_fall, self.cfg.max_fall)
 
     def _move_and_resolve_x(self, dt: float, solids: List[pygame.Rect]) -> None:
         """Move on X axis and resolve collisions against solids."""
@@ -119,4 +134,3 @@ class Player:
                     r.top = s.bottom
                 self.pos.y = float(r.y)
                 self.vel.y = 0.0
-

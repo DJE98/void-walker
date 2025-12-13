@@ -16,7 +16,9 @@
     ]
   },
   "render": {
-    "show_grid": false
+    "show_grid": false,
+    "mode": "flat",
+    "color": "multicolor"
   },
   "player": {
     "color": [
@@ -26,9 +28,18 @@
     ],
     "speed": 260,
     "jump_strength": 560,
-    "gravity": 1700,
+    "gravity": [0, 1700],
     "max_fall": 1000,
     "alive": true
+  },
+  "music": {
+    "dir": "music",
+    "fade_ms": 800,
+    "playlist": [
+      "cool-hiphop-rap-beat-20230307-191928.mp3",
+      "simple-hiphop-beat-20231218-182036.mp3",
+      "steady-rap-beat-20231220-182861.mp3"
+    ]
   },
 
   "upgrades": {

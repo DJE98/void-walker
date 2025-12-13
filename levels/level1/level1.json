@@ -3,10 +3,15 @@
   "window": {
     "bg": [14, 18, 30]
   },
-  "render": { "show_grid": true },
+  "render": { "show_grid": true, "mode": "ascii", "color": "gray" },
   "player": {
     "color": [210, 230, 255],
-    "jump_strength": 600
+    "jump_strength": 600,
+    "gravity": [120, 1550]
+  },
+  "music": {
+    "playlist": ["cool-hiphop-rap-beat-20230307-191928.mp3"],
+    "bitcrusher": { "bits": 8, "sample_rate": 8000 }
   },
   "currentLevel": "Level1",
   "legend": {
