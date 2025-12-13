@@ -123,7 +123,7 @@ def read_level_lines_file(resolved_name: str, levels_dir: Path) -> List[str]:
 def read_level_lines(resolved_name: str, inline_levels: Dict[str, Any], levels_dir: Path) -> List[str]:
     """Read grid lines either from inline map or file."""
     inline = read_level_lines_inline(resolved_name, inline_levels)
-    if inline is not None:
+    if inline is not None and inline is not "":
         return inline
     return read_level_lines_file(resolved_name, levels_dir)
 
