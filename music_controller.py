@@ -5,6 +5,8 @@ from typing import Any, Dict, List, Optional, Sequence
 
 import pygame
 
+from models import BitcrusherSettings
+
 
 class MusicController:
     """Lightweight background music helper with playlists and fades."""
@@ -17,51 +19,17 @@ class MusicController:
     ) -> None:
         self.music_dir = music_dir
         self.fade_ms = fade_ms
-        self.bitcrusher_cfg = self._normalize_bitcrusher_cfg(bitcrusher_cfg)
+        self.bitcrusher_cfg = BitcrusherSettings.from_raw(bitcrusher_cfg)
         self.playlist: List[Path] = []
         self.index = -1
         self.enabled = self._init_mixer()
-
-    def _normalize_bitcrusher_cfg(self, raw: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Coerce raw bitcrusher config into a stable structure."""
-        if isinstance(raw, dict):
-            enabled = True
-        else:
-            raw = {}
-            enabled = False
-        bits_default = 8 if enabled else 16
-        freq_default = 12000 if enabled else 44100
-
-        bits = int(raw.get("bits", raw.get("bit_depth", bits_default)))
-        bits = max(4, min(bits, 32))
-
-        freq = int(raw.get("sample_rate", raw.get("sampleRate", freq_default)))
-        freq = max(4000, min(freq, 192000))
-
-        return {"enabled": enabled, "bits": bits, "sample_rate": freq}
-
-    def _mixer_sample_size(self, bits: int) -> int:
-        """Return a pygame-supported signed mixer size (8, 16, or 32)."""
-        if bits <= 8:
-            return 8
-        if bits <= 16:
-            return 16
-        return 32
-
-    def _mixer_kwargs(self) -> Dict[str, Any]:
-        """Build mixer init kwargs, applying bitcrusher if enabled."""
-        cfg = self.bitcrusher_cfg
-        freq = cfg["sample_rate"] if cfg["enabled"] else 44100
-        bits = cfg["bits"] if cfg["enabled"] else 16
-        size = -abs(self._mixer_sample_size(int(bits)))
-        return {"frequency": int(freq), "size": size, "channels": 2}
 
     def _init_mixer(self) -> bool:
         """Initialize pygame mixer; return False if unavailable."""
         try:
             if pygame.mixer.get_init():
                 pygame.mixer.quit()
-            pygame.mixer.init(**self._mixer_kwargs())
+            pygame.mixer.init(**self.bitcrusher_cfg.mixer_kwargs())
             return True
         except pygame.error as e:
             print(f"[music] pygame mixer disabled (bitcrusher={self.bitcrusher_cfg}): {e}")
@@ -69,16 +37,13 @@ class MusicController:
 
     def _set_bitcrusher(self, cfg: Optional[Dict[str, Any]]) -> None:
         """Reconfigure the mixer if bitcrusher settings change."""
-        new_cfg = self._normalize_bitcrusher_cfg(cfg)
+        new_cfg = BitcrusherSettings.from_raw(cfg)
         if new_cfg == self.bitcrusher_cfg:
             return
 
-        was_playing = self.enabled and pygame.mixer.music.get_busy()
+        was_playing = self.enabled and self._is_playing
         if was_playing:
-            try:
-                pygame.mixer.music.fadeout(self.fade_ms)
-            except pygame.error:
-                pass
+            self._fadeout_current()
 
         self.bitcrusher_cfg = new_cfg
         self.enabled = self._init_mixer()
@@ -116,6 +81,16 @@ class MusicController:
             resolved.append(track)
         return resolved
 
+    @property
+    def _is_playing(self) -> bool:
+        return pygame.mixer.music.get_busy()
+
+    def _fadeout_current(self) -> None:
+        try:
+            pygame.mixer.music.fadeout(self.fade_ms)
+        except pygame.error:
+            pass
+
     def _play_current(self, fade_in: bool) -> None:
         if not self.enabled or not self.playlist:
             return
@@ -135,11 +110,11 @@ class MusicController:
             return
 
         resolved = self._resolve_playlist(names)
-        if resolved == self.playlist and pygame.mixer.music.get_busy():
+        if resolved == self.playlist and self._is_playing:
             return
 
-        if pygame.mixer.music.get_busy():
-            pygame.mixer.music.fadeout(self.fade_ms)
+        if self._is_playing:
+            self._fadeout_current()
 
         self.playlist = resolved
         self.index = 0
