@@ -4,12 +4,26 @@
     "width": 1000,
     "height": 600,
     "title": "Make Mistakes Permanent",
-    "bg": [18, 20, 28],
-    "grid": [126, 126, 126]
+    "bg": [
+      18,
+      20,
+      28
+    ],
+    "grid": [
+      126,
+      126,
+      126
+    ]
   },
-  "render": { "show_grid": false },
+  "render": {
+    "show_grid": false
+  },
   "player": {
-    "color": [235, 240, 255],
+    "color": [
+      235,
+      240,
+      255
+    ],
     "speed": 260,
     "jump_strength": 560,
     "gravity": 1700,
@@ -18,21 +32,68 @@
   },
   "currentLevel": "Level1",
   "legend": {
-    ".": { "shape": "none", "solid": false },
-    "#": { "shape": "rect", "color": [85, 90, 105], "solid": true },
-    "=": { "shape": "rect", "color": [110, 115, 135], "solid": true },
-    "S": { "shape": "rect", "color": [70, 200, 110], "solid": false },
+    ".": {
+      "description": "Empty Space",
+      "shape": "none",
+      "solid": false
+    },
+    "#": {
+      "description": "Solid Block",
+      "shape": "rect",
+      "color": [
+        85,
+        90,
+        105
+      ],
+      "solid": true
+    },
+    "=": {
+      "description": "Bridge",
+      "shape": "rect",
+      "color": [
+        110,
+        115,
+        135
+      ],
+      "solid": true
+    },
+    "S": {
+      "description": "Spawn Point",
+      "shape": "rect",
+      "color": [
+        70,
+        200,
+        110
+      ],
+      "solid": false
+    },
     "G": {
+      "description": "Goal",
       "shape": "circle",
-      "color": [255, 214, 90],
+      "color": [
+        255,
+        214,
+        90
+      ],
       "solid": false,
-      "on_collision": { "currentLevel": "Level2" }
+      "on_collision": {
+        "currentLevel": "Level2"
+      }
     },
     "^": {
+      "description": "Death Trap",
       "shape": "triangle",
-      "color": [230, 80, 95],
+      "color": [
+        230,
+        80,
+        95
+      ],
       "solid": false,
-      "on_collision": { "player": { "alive": false } }
+      "on_collision": {
+        "player": {
+          "alive": false
+        }
+      }
     }
   },
   "levels": {
@@ -44,4 +105,3 @@
     }
   }
 }
-
