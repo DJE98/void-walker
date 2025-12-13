@@ -3,7 +3,7 @@
   "window": {
     "width": 1000,
     "height": 600,
-    "title": "Make Mistakes Permanent",
+    "title": "Mistakes are permanent",
     "bg": [
       18,
       20,
@@ -30,45 +30,72 @@
     "max_fall": 1000,
     "alive": true
   },
+
+  "upgrades": {
+    "high_jump": { "max_level": 10, "bonuses": [0, 500, 350, 250, 200, 150, 100, 50, 25, 20, 5] },
+    "speed": { "max_level": 10, "bonuses": [0, 200, 150, 110, 80, 60, 50, 40, 30, 20, 10] },
+    "double_jump": { "max_level": 3, "jumps": [0, 1, 2, 3] },
+    "fireball": { "max_level": 1 },
+    "gliding": { "max_level": 3, "gravity_reduction": [0, 500, 850, 1200] },
+    "extra_live": { "max_level": 2, "lives": [1, 2, 3] },
+    "fall_damage": { "max_level": 10, "threshold_tiles": [5, 10, 15, 18, 21, 24, 26, 27, 28, 29, 30] },
+    "gravity_transformation": { "max_level": 4, "angles": [0, 90, 180, 270] }
+  },
+
+  "scoring": {
+    "star_points": 100,
+    "exploration_points": true
+  },
   "currentLevel": "Level1",
   "legend": {
     ".": {
-      "description": "Empty Space",
       "shape": "none",
-      "solid": false
+      "solid": false,
+      "consumable": false,
+      "consumed_as": ".",
+      "destructible": false,
+      "destroyed_as": "."
     },
     "#": {
-      "description": "Solid Block",
       "shape": "rect",
       "color": [
         85,
         90,
         105
       ],
-      "solid": true
+      "solid": true,
+      "consumable": false,
+      "consumed_as": "#",
+      "destructible": false,
+      "destroyed_as": "."
     },
     "=": {
-      "description": "Bridge",
       "shape": "rect",
       "color": [
         110,
         115,
         135
       ],
-      "solid": true
+      "solid": true,
+      "consumable": false,
+      "consumed_as": "=",
+      "destructible": false,
+      "destroyed_as": "."
     },
     "S": {
-      "description": "Spawn Point",
       "shape": "rect",
       "color": [
         70,
         200,
         110
       ],
-      "solid": false
+      "solid": false,
+      "consumable": false,
+      "consumed_as": "S",
+      "destructible": false,
+      "destroyed_as": "."
     },
     "G": {
-      "description": "Goal",
       "shape": "circle",
       "color": [
         255,
@@ -76,12 +103,15 @@
         90
       ],
       "solid": false,
+      "consumable": false,
+      "consumed_as": "G",
+      "destructible": false,
+      "destroyed_as": ".",
       "on_collision": {
         "currentLevel": "Level2"
       }
     },
     "^": {
-      "description": "Death Trap",
       "shape": "triangle",
       "color": [
         230,
@@ -89,13 +119,91 @@
         95
       ],
       "solid": false,
+      "consumable": false,
+      "consumed_as": "^",
+      "destructible": false,
+      "destroyed_as": ".",
       "on_collision": {
         "player": {
           "alive": false
         }
       }
+    },
+    "U": {
+      "shape": "circle",
+      "color": [
+        60,
+        220,
+        120
+      ],
+      "solid": false,
+      "consumable": true,
+      "consumed_as": "D",
+      "destructible": false,
+      "destroyed_as": ".",
+      "on_collision": {
+        "ui": {
+          "open": "upgrade_menu"
+        }
+      }
+    },
+    "D": {
+      "shape": "circle",
+      "color": [
+        100,
+        110,
+        105
+      ],
+      "solid": false,
+      "consumable": false,
+      "consumed_as": "D",
+      "destructible": false,
+      "destroyed_as": "."
+    },
+    "*": {
+      "shape": "triangle",
+      "color": [
+        255,
+        220,
+        90
+      ],
+      "solid": false,
+      "consumable": true,
+      "consumed_as": "d",
+      "destructible": false,
+      "destroyed_as": ".",
+      "on_collision": {
+        "score": {
+          "add": 100
+        }
+      }
+    },
+    "d": {
+      "shape": "triangle",
+      "color": [
+        120,
+        120,
+        120
+      ],
+      "solid": false,
+      "consumable": false,
+      "consumed_as": "d",
+      "destructible": false,
+      "destroyed_as": "."
+    },
+    "B": {
+      "shape": "rect",
+      "color": [
+        150,
+        120,
+        90
+      ],
+      "solid": true,
+      "consumable": false,
+      "consumed_as": "B",
+      "destructible": true,
+      "destroyed_as": "."
     }
   },
-  "levels": {
-  }
+  "levels": {}
 }
