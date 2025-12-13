@@ -1,5 +1,5 @@
 {
-  "currentLevel": "Level2",
+  "currentLevel": "Level6",
   "legend": {
     "G": {
       "shape": "circle",
@@ -10,7 +10,7 @@
       ],
       "solid": false,
       "on_collision": {
-        "currentLevel": "Level3"
+        "currentLevel": "Level6"
       }
     }
   }

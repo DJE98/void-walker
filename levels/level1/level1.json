@@ -8,8 +8,19 @@
     "color": [210, 230, 255],
     "jump_strength": 600
   },
+  "currentLevel": "Level1",
   "legend": {
-    "G": { "color": [255, 190, 60] },
-    "^": { "color": [250, 110, 120] }
+    "G": {
+      "shape": "circle",
+      "color": [
+        255,
+        214,
+        90
+      ],
+      "solid": false,
+      "on_collision": {
+        "currentLevel": "Level2"
+      }
+    }
   }
 }
