@@ -30,7 +30,15 @@
     "jump_strength": 560,
     "gravity": [0, 1700],
     "max_fall": 1000,
-    "alive": true
+    "alive": true,
+    "score": 1,
+    "lives": 1,
+    "starting_lives": 1,
+    "_max_x_tile_reached": 0,
+    "_max_y_tile_reached": 0,
+    "upgrades": {
+      "high_jump": 0
+    }
   },
   "music": {
     "dir": "music",
@@ -43,16 +51,93 @@
   },
 
   "upgrades": {
-    "high_jump": { "max_level": 10, "bonuses": [0, 500, 350, 250, 200, 150, 100, 50, 25, 20, 5] },
-    "speed": { "max_level": 10, "bonuses": [0, 200, 150, 110, 80, 60, 50, 40, 30, 20, 10] },
-    "double_jump": { "max_level": 3, "jumps": [0, 1, 2, 3] },
-    "fireball": { "max_level": 1 },
-    "gliding": { "max_level": 3, "gravity_reduction": [0, 500, 850, 1200] },
-    "extra_live": { "max_level": 2, "lives": [1, 2, 3] },
-    "fall_damage": { "max_level": 10, "threshold_tiles": [5, 10, 15, 18, 21, 24, 26, 27, 28, 29, 30] },
-    "gravity_transformation": { "max_level": 4, "angles": [0, 90, 180, 270] }
+    "high_jump": {
+      "max_level": 10,
+      "level": [
+        560,
+        1000,
+        1350,
+        1550,
+        1700,
+        1850,
+        1950,
+        2050,
+        2125,
+        2150,
+        2200
+      ]
+    },
+    "speed": {
+      "max_level": 10,
+      "bonuses": [
+        0,
+        200,
+        150,
+        110,
+        80,
+        60,
+        50,
+        40,
+        30,
+        20,
+        10
+      ]
+    },
+    "double_jump": {
+      "max_level": 3,
+      "jumps": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "fireball": {
+      "max_level": 1
+    },
+    "gliding": {
+      "max_level": 3,
+      "gravity_reduction": [
+        0,
+        500,
+        850,
+        1200
+      ]
+    },
+    "extra_live": {
+      "max_level": 2,
+      "lives": [
+        1,
+        2,
+        3
+      ]
+    },
+    "fall_damage": {
+      "max_level": 10,
+      "threshold_tiles": [
+        5,
+        10,
+        15,
+        18,
+        21,
+        24,
+        26,
+        27,
+        28,
+        29,
+        30
+      ]
+    },
+    "gravity_transformation": {
+      "max_level": 4,
+      "angles": [
+        0,
+        90,
+        180,
+        270
+      ]
+    }
   },
-
   "scoring": {
     "star_points": 100,
     "exploration_points": true
@@ -61,11 +146,7 @@
   "legend": {
     ".": {
       "shape": "none",
-      "solid": false,
-      "consumable": false,
-      "consumed_as": ".",
-      "destructible": false,
-      "destroyed_as": "."
+      "solid": false
     },
     "#": {
       "shape": "rect",
@@ -74,11 +155,7 @@
         90,
         105
       ],
-      "solid": true,
-      "consumable": false,
-      "consumed_as": "#",
-      "destructible": false,
-      "destroyed_as": "."
+      "solid": true
     },
     "=": {
       "shape": "rect",
@@ -87,11 +164,7 @@
         115,
         135
       ],
-      "solid": true,
-      "consumable": false,
-      "consumed_as": "=",
-      "destructible": false,
-      "destroyed_as": "."
+      "solid": true
     },
     "S": {
       "shape": "rect",
@@ -100,11 +173,7 @@
         200,
         110
       ],
-      "solid": false,
-      "consumable": false,
-      "consumed_as": "S",
-      "destructible": false,
-      "destroyed_as": "."
+      "solid": false
     },
     "G": {
       "shape": "circle",
@@ -114,10 +183,6 @@
         90
       ],
       "solid": false,
-      "consumable": false,
-      "consumed_as": "G",
-      "destructible": false,
-      "destroyed_as": ".",
       "on_collision": {
         "currentLevel": "Level2"
       }
@@ -129,14 +194,10 @@
         80,
         95
       ],
-      "solid": false,
-      "consumable": false,
-      "consumed_as": "^",
-      "destructible": false,
-      "destroyed_as": ".",
+      "solid": true,
       "on_collision": {
         "player": {
-          "alive": false
+          "lives": "down"
         }
       }
     },
@@ -150,11 +211,9 @@
       "solid": false,
       "consumable": true,
       "consumed_as": "D",
-      "destructible": false,
-      "destroyed_as": ".",
       "on_collision": {
-        "ui": {
-          "open": "upgrade_menu"
+        "player": {
+          "high_jump": "upgrade"
         }
       }
     },
@@ -165,11 +224,7 @@
         110,
         105
       ],
-      "solid": false,
-      "consumable": false,
-      "consumed_as": "D",
-      "destructible": false,
-      "destroyed_as": "."
+      "solid": false
     },
     "*": {
       "shape": "triangle",
@@ -181,11 +236,9 @@
       "solid": false,
       "consumable": true,
       "consumed_as": "d",
-      "destructible": false,
-      "destroyed_as": ".",
       "on_collision": {
-        "score": {
-          "add": 100
+        "player": {
+          "score": "up100"
         }
       }
     },
@@ -196,11 +249,7 @@
         120,
         120
       ],
-      "solid": false,
-      "consumable": false,
-      "consumed_as": "d",
-      "destructible": false,
-      "destroyed_as": "."
+      "solid": false
     },
     "B": {
       "shape": "rect",
@@ -210,8 +259,6 @@
         90
       ],
       "solid": true,
-      "consumable": false,
-      "consumed_as": "B",
       "destructible": true,
       "destroyed_as": "."
     }

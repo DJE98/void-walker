@@ -5,9 +5,9 @@ from typing import Dict, Iterable, Tuple
 import pygame
 
 from camera import world_to_screen
+from game_types import Color
 from models import Level, TileSpec
 from player import Player
-from game_types import Color
 
 
 def visible_tile_bounds(
@@ -33,7 +33,9 @@ def iter_visible_tiles(
     tile_size: int,
 ) -> Iterable[Tuple[int, int, str]]:
     """Yield (x, y, char) for tiles within the visible viewport."""
-    left, top, right, bottom = visible_tile_bounds(camera, window_w, window_h, tile_size)
+    left, top, right, bottom = visible_tile_bounds(
+        camera, window_w, window_h, tile_size
+    )
     for y in range(top, min(bottom, level.height_tiles)):
         row = level.grid[y]
         for x in range(left, min(right, level.width_tiles)):
@@ -233,6 +235,7 @@ def draw_hud(
     font: pygame.font.Font,
     level_name: str,
     player_alive: bool,
+    player_score: int,
     render_mode: str,
     color_mode: str,
 ) -> None:
@@ -246,7 +249,7 @@ def draw_hud(
 
     color_label = "Gray" if color_mode == "gray" else "Multicolor"
     txt = (
-        f"Level: {level_name} | Alive: {player_alive} | Mode: {mode_label} | Color: {color_label} "
+        f"Level: {level_name} | Score: {player_score} | Alive: {player_alive} | Mode: {mode_label} | Color: {color_label} "
         "| T: ASCII/Flat/Gradient | C: Multicolor/Gray | R: restart | ESC: quit"
     )
     surf.blit(font.render(txt, True, (220, 220, 235)), (12, 10))
@@ -287,5 +290,5 @@ def render_frame(
     )
     draw_player(screen, player, camera, mode)
     draw_grid(screen, show_grid, camera, window_w, window_h, tile_size, grid_color)
-    draw_hud(screen, font, level.name, player.alive, mode, color_mode)
+    draw_hud(screen, font, level.name, player.alive, player.score, mode, color_mode)
     pygame.display.flip()

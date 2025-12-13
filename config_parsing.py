@@ -2,8 +2,26 @@ from __future__ import annotations
 
 from typing import Any, Dict, Tuple
 
-from models import PlayerConfig, TileSpec
+from models import PlayerConfig, TileSpec, UpgradesConfig
 from utils import apply_color_mode, as_color
+
+
+def _parse_initial_upgrade_levels(raw: Any) -> Dict[str, int]:
+    """
+    Optional per-run starting levels (usually all 0).
+    Allows config like:
+      "player": { "upgrades": { "speed": 1, "high_jump": 2 } }
+    """
+    if not isinstance(raw, dict):
+        return {}
+
+    levels: Dict[str, int] = {}
+    for name, value in raw.items():
+        try:
+            levels[str(name)] = max(0, int(value))
+        except (TypeError, ValueError):
+            continue
+    return levels
 
 
 def _parse_gravity(raw_gravity: Any) -> Tuple[float, float]:
@@ -42,7 +60,22 @@ def parse_player_config(raw: Dict[str, Any], color_mode: str = "multicolor") -> 
         jump_strength=float(raw.get("jump_strength", 560)),
         gravity=_parse_gravity(raw.get("gravity")),
         max_fall=float(raw.get("max_fall", 1000)),
+        upgrades=_parse_initial_upgrade_levels(raw.get("upgrades", {})),
     )
+
+
+def parse_upgrade_config(raw: Dict[str, Any]) -> UpgradesConfig:
+    """Parse upgrade settings from config data.
+
+    Args:
+        raw: Dict containing upgrade settings.
+
+    Returns:
+        UpgradesConfig with defaults applied.
+    """
+    if not isinstance(raw, dict):
+        raw = {}
+    return UpgradesConfig.from_dict(raw)
 
 
 def parse_legend(cfg: Dict[str, Any], color_mode: str = "multicolor") -> Dict[str, TileSpec]:
@@ -66,9 +99,13 @@ def parse_legend(cfg: Dict[str, Any], color_mode: str = "multicolor") -> Dict[st
         if not isinstance(on_col, dict):
             on_col = {}
 
-        legend[ch] = TileSpec(char=ch, shape=shape, color=color, solid=solid, on_collision=on_col)
+        legend[ch] = TileSpec(
+            char=ch, shape=shape, color=color, solid=solid, on_collision=on_col
+        )
 
     if "." not in legend:
-        legend["."] = TileSpec(char=".", shape="none", color=None, solid=False, on_collision={})
+        legend["."] = TileSpec(
+            char=".", shape="none", color=None, solid=False, on_collision={}
+        )
 
     return legend

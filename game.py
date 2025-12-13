@@ -7,12 +7,13 @@ import pygame
 
 from camera import update_camera
 from config_io import load_json_config
-from config_parsing import parse_legend, parse_player_config
+from config_parsing import parse_legend, parse_player_config, parse_upgrade_config
 from level_loader import find_level_config_path, load_level, resolve_level_name
 from models import Level, TriggerTile
 from music_controller import MusicController
 from player import Player
 from rendering import render_frame
+from scoreboard import ScoreboardFile, ScoreEntry, now_iso
 from utils import apply_color_mode, as_color, deep_get, deep_merge
 from game_types import Color
 
@@ -34,6 +35,23 @@ class Game:
         self.current_level_name = resolved
         self.current_level_override = level_cfg_override
         self._apply_active_config(merged_cfg, is_initial=True)
+        self.upgrades_cfg: dict[str, Any] = (
+            merged_cfg.get("upgrades", {})
+            if isinstance(merged_cfg.get("upgrades"), dict)
+            else {}
+        )
+        self.scoring_cfg: dict[str, Any] = (
+            merged_cfg.get("scoring", {})
+            if isinstance(merged_cfg.get("scoring"), dict)
+            else {}
+        )
+        self.exploration_scoring_enabled: bool = bool(
+            self.scoring_cfg.get("exploration_points", False)
+        )
+        self.scoreboard = ScoreboardFile(
+            Path(merged_cfg.get("scoreboard_file", "scoreboard.txt"))
+        )
+        self._was_alive_last_frame: bool = True
 
         self._init_pygame()
         self._init_ui()
@@ -75,7 +93,9 @@ class Game:
         merged_cfg = deep_merge(self.base_cfg, level_cfg_override)
         return resolved, merged_cfg, level_cfg_override
 
-    def _apply_active_config(self, cfg: Dict[str, Any], is_initial: bool = False) -> None:
+    def _apply_active_config(
+        self, cfg: Dict[str, Any], is_initial: bool = False
+    ) -> None:
         """Apply merged config for the current level."""
         self.active_cfg = cfg
         self.tile_size = int(cfg.get("tile_size", 48))
@@ -87,6 +107,10 @@ class Game:
             self.window_h = int(deep_get(cfg, "window.height", 600))
             self.title = str(deep_get(cfg, "window.title", "ASCII Side-Scroller"))
 
+        self.bg = as_color(deep_get(cfg, "window.bg", [18, 20, 28]), (18, 20, 28))
+        self.grid_color = as_color(
+            deep_get(cfg, "window.grid", [126, 126, 126]), (126, 126, 126)
+        )
         self.show_grid = bool(deep_get(cfg, "render.show_grid", False))
         self._refresh_colors()
         if hasattr(self, "tile_font"):
@@ -217,11 +241,13 @@ class Game:
     def apply_patch(self, patch: Dict[str, Any]) -> None:
         """Apply a patch dict to the game and/or player."""
         if "player" in patch and isinstance(patch["player"], dict):
-            self.player.apply_patch(patch["player"])
+            self.player.apply_patch(patch["player"], upgrades=self.upgrades_cfg)
         if "currentLevel" in patch:
             self.pending_level_name = str(patch["currentLevel"])
 
-    def _apply_trigger_if_colliding(self, trigger: TriggerTile, player_rect: pygame.Rect) -> None:
+    def _apply_trigger_if_colliding(
+        self, trigger: TriggerTile, player_rect: pygame.Rect
+    ) -> None:
         """Apply trigger patch if the player collides with it."""
         if player_rect.colliderect(trigger.rect):
             self.apply_patch(trigger.spec.on_collision)
@@ -247,6 +273,9 @@ class Game:
     def restart_level(self) -> None:
         """Respawn the player at the current level's spawn."""
         self.player.respawn(self.level.spawn_px)
+        # starting_lives = int(deep_get(merged_cfg, "player.lives", 1))
+        # self.player.start_new_run(self.upgrades_cfg, starting_lives=starting_lives)
+        self._was_alive_last_frame = True
 
     def _is_player_below_death_line(self) -> bool:
         """Return True if the player has fallen far below the level."""
@@ -261,8 +290,20 @@ class Game:
     def update(self, dt: float, keys: pygame.key.ScancodeWrapper) -> None:
         """Update one simulation step."""
         self.player.update(dt, keys, self.level.solids)
+        self.player.update_exploration_score(
+            self.tile_size, enabled=self.exploration_scoring_enabled
+        )
         self.handle_triggers()
         self._apply_fall_death()
+
+        if self._was_alive_last_frame and not self.player.alive:
+            self.scoreboard.append(
+                ScoreEntry(
+                    timestamp=now_iso(), level=self.level.name, score=self.player.score
+                )
+            )
+        self._was_alive_last_frame = self.player.alive
+
         self.switch_level_if_needed()
         self._update_music()
         update_camera(

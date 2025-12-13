@@ -1,23 +1,40 @@
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List
 
 import pygame
 
-from models import PlayerConfig
+from models import PlayerConfig, UpgradesConfig
 from utils import clamp_float
+
+_OP_RE = re.compile(r"^(up|down)(\d+)?$")
 
 
 class Player:
-    """Simple platformer player controller with AABB collision."""
+    """Simple platformer player controller with AABB collision + per-run scoring."""
 
-    def __init__(self, cfg: PlayerConfig, spawn_px: pygame.Vector2, tile_size: int) -> None:
+    def __init__(
+        self,
+        cfg: PlayerConfig,
+        spawn_px: pygame.Vector2,
+        tile_size: int,
+        upgradesCfg: UpgradesConfig,
+    ) -> None:
         self.cfg = cfg
+        self._tile_size = tile_size
         self.size = pygame.Vector2(tile_size * 0.70, tile_size * 0.90)
         self.pos = pygame.Vector2(spawn_px.x, spawn_px.y)
         self.vel = pygame.Vector2(0, 0)
         self.on_ground = False
         self.alive = True
+        self.score: int = 0
+        self.lives: int = 1  # default; optionally overridden by config later
+        self.upgrades: dict[str, Any] = {}  # populated from config["upgrades"]
+        self.upgrades_cfg = upgradesCfg
+        self._max_x_tile_reached: int = -1
+        self._max_y_tile_reached: int = -1
+
         self._rect = pygame.Rect(0, 0, int(self.size.x), int(self.size.y))
 
     @property
@@ -29,8 +46,20 @@ class Player:
         self._rect.h = int(self.size.y)
         return self._rect
 
+    # ---------
+    # Run state
+    # ---------
+
+    def reset_run(self, spawn_px: pygame.Vector2) -> None:
+        """Start a new run (score/exploration reset). Use this for 'R' restart and new level loads."""
+        self.pos.update(spawn_px.x, spawn_px.y)
+        self.vel.update(0, 0)
+        self.on_ground = False
+        self.alive = True
+        self.score = 0
+
     def respawn(self, spawn_px: pygame.Vector2) -> None:
-        """Reset player state to a spawn point."""
+        """Respawn without necessarily resetting run state (keep score)."""
         self.pos.update(spawn_px.x, spawn_px.y)
         self.vel.update(0, 0)
         self.on_ground = False
@@ -94,10 +123,15 @@ class Player:
             self.vel.x = 0.0
 
     def _try_jump(self, keys: pygame.key.ScancodeWrapper) -> None:
-        """Apply an instantaneous jump if pressed and grounded."""
         jump = keys[pygame.K_UP] or keys[pygame.K_w] or keys[pygame.K_SPACE]
         if jump and self.on_ground:
-            self.vel.y = -self.cfg.jump_strength
+            # Use player's current upgrade level to index global bonus table.
+            level = int(self.cfg.upgrades.get("high_jump", 0))
+            level_score = self.upgrades_cfg.high_jump.level
+            level = max(0, min(level, len(level_score) - 1))
+            print(f"jump level {level} / {level_score[level]}")
+            effective_jump_strength = float(level_score[level])
+            self.vel.y = -effective_jump_strength
             self.on_ground = False
 
     def _apply_gravity(self, dt: float) -> None:
@@ -108,7 +142,6 @@ class Player:
         self.vel.y = clamp_float(self.vel.y, -self.cfg.max_fall, self.cfg.max_fall)
 
     def _move_and_resolve_x(self, dt: float, solids: List[pygame.Rect]) -> None:
-        """Move on X axis and resolve collisions against solids."""
         self.pos.x += self.vel.x * dt
         r = self.rect
         for s in solids:
@@ -120,7 +153,6 @@ class Player:
                 self.pos.x = float(r.x)
 
     def _move_and_resolve_y(self, dt: float, solids: List[pygame.Rect]) -> None:
-        """Move on Y axis and resolve collisions against solids."""
         self.pos.y += self.vel.y * dt
         r = self.rect
 
@@ -134,3 +166,49 @@ class Player:
                     r.top = s.bottom
                 self.pos.y = float(r.y)
                 self.vel.y = 0.0
+
+    def update_exploration_score(
+        self, tile_size: int = 48, enabled: bool = True
+    ) -> None:
+        if not enabled or not self.alive:
+            return
+
+        x_tile = int(self.rect.centerx // tile_size)
+        y_tile = int(self.rect.centery // tile_size)
+
+        # award +1 for each new max tile reached in either direction
+        if x_tile > self._max_x_tile_reached:
+            self.score += (
+                (x_tile - self._max_x_tile_reached)
+                if self._max_x_tile_reached >= 0
+                else 1
+            )
+            self._max_x_tile_reached = x_tile
+
+        if y_tile > self._max_y_tile_reached:
+            self.score += (
+                (y_tile - self._max_y_tile_reached)
+                if self._max_y_tile_reached >= 0
+                else 1
+            )
+            self._max_y_tile_reached = y_tile
+
+
+def parse_numeric_op(value: Any) -> int | None:
+    """
+    Returns a delta for "up", "down", "up100", "down25".
+    None means "not an op".
+    """
+    if not isinstance(value, str):
+        return None
+
+    value = value.strip().lower()
+    if value in ("up", "down"):
+        return 1 if value == "up" else -1
+
+    m = _OP_RE.match(value)
+    if not m:
+        return None
+    direction, number = m.group(1), m.group(2)
+    magnitude = int(number) if number is not None else 1
+    return magnitude if direction == "up" else -magnitude
