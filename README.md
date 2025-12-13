@@ -56,6 +56,11 @@ The player moves left/right, jumps under gravity, **collides with solid tiles**,
 - `player`: default movement/physics (speed, jump_strength, gravity, max_fall)
 - `currentLevel`: starting level name
 - `legend`: tile definitions (the “rules engine”)
+- `music`:
+  - `dir`: folder containing background tracks (defaults to `music`)
+  - `playlist`: list of track filenames to loop as the global soundtrack
+  - `fade_ms`: fade duration when switching playlists/levels
+  - Levels can provide their own `music.playlist` in `levels/<name>/<name>.json`; level playlists override the global playlist, and the global playlist is used when no level playlist is defined.
 
 ### Legend rules (tile definitions)
 Each tile character maps to:

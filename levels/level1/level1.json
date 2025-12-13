@@ -9,6 +9,9 @@
     "jump_strength": 600,
     "gravity": [120, 1550]
   },
+  "music": {
+    "playlist": ["cool-hiphop-rap-beat-20230307-191928.mp3"]
+  },
   "legend": {
     "G": { "color": [255, 190, 60] },
     "^": { "color": [250, 110, 120] }
