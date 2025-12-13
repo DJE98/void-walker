@@ -1,7 +1,23 @@
-# Mistakes are permanent — ASCII Side-Scroller
+# Voidwalker: Mistakes are permanent — a ASCII Side-Scroller
 
 A grid-based side-scrolling platformer where **levels are ASCII tile maps** and **tile behavior is defined in `config.json`**.  
 The player moves left/right, jumps under gravity, **collides with solid tiles**, and **triggers non-solid tiles** that can modify player/game state (hazards, level transitions, pickups).
+
+## Story
+**NAME:** *Voidwalker*
+
+**SETTING:** Neon‑drenched **1980s cyberspace** — a humming world of CRT scanlines, corrupted grids, and corporate mainframes stitched together by broken protocols.
+
+**STORY:**
+Voidwalker is an experimental virus born in the late digital age, drifting between systems never meant to talk to each other. Each new machine is hostile, unstable, and full of outdated logic traps. To survive, Voidwalker must adapt—rewriting itself through stolen upgrades, slipping through memory gaps, and exploiting imperfect firewalls.
+
+**PLAY FEEL / HOOK:**
+Every jump is a risk. Every upgrade is a traceable mutation. Firewalls learn, security tightens, and the system never forgets what you’ve broken or consumed. Progress means becoming stronger—but also more visible.
+
+**TONE:**
+Retro‑futuristic, hostile, playful in presentation, ruthless in consequence. The world glitches, but its rules are strict.
+
+**TAGLINE:** *But beware: mistakes are permanent 😊*
 
 ## Starting Game
 - Dev shell: `nix-shell`
