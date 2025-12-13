@@ -64,7 +64,8 @@ The player moves left/right, jumps under gravity, **collides with solid tiles**,
   - `dir`: folder containing background tracks (defaults to `music`)
   - `playlist`: list of track filenames to loop as the global soundtrack
   - `fade_ms`: fade duration when switching playlists/levels
-  - Levels can provide their own `music.playlist` in `levels/<name>/<name>.json`; level playlists override the global playlist, and the global playlist is used when no level playlist is defined.
+  - `bitcrusher`: optional lo-fi mixer settings for background music (e.g. `{"bits": 8, "sample_rate": 12000}`); providing this block enables it and omitting the block disables it
+  - Levels can provide their own `music.playlist` (and optional `music.bitcrusher`) in `levels/<name>/<name>.json`; level playlists override the global playlist, and the global playlist is used when no level playlist is defined.
 
 ### Legend rules (tile definitions)
 Each tile character maps to:

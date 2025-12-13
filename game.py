@@ -146,7 +146,8 @@ class Game:
         """Initialize music controller and start playback."""
         music_dir = Path(deep_get(self.base_cfg, "music.dir", "music"))
         fade_ms = int(deep_get(self.base_cfg, "music.fade_ms", 800))
-        self.music_controller = MusicController(music_dir, fade_ms)
+        bitcrusher_cfg = deep_get(self.active_cfg, "music.bitcrusher", None)
+        self.music_controller = MusicController(music_dir, fade_ms, bitcrusher_cfg)
         self._update_music_playlist()
 
     def _select_playlist(self) -> List[str]:
@@ -164,6 +165,12 @@ class Game:
         """Update music playback to match the active level playlist."""
         if hasattr(self, "music_controller"):
             self.music_controller.set_playlist(self._select_playlist())
+
+    def _update_music_settings(self) -> None:
+        """Apply music-related settings that depend on the active config."""
+        if hasattr(self, "music_controller"):
+            bitcrusher_cfg = deep_get(self.active_cfg, "music.bitcrusher", None)
+            self.music_controller.set_bitcrusher(bitcrusher_cfg)
 
     def _update_music(self) -> None:
         """Tick music controller (advance songs when needed)."""
@@ -200,6 +207,7 @@ class Game:
         """Switch to a level and respawn the player."""
         self.level = self._load_level(name)
         self.player = self._create_player(self.level)
+        self._update_music_settings()
         self._update_music_playlist()
 
     # ----------------------------
