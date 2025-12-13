@@ -17,7 +17,8 @@
   },
   "render": {
     "show_grid": false,
-    "mode": "flat"
+    "mode": "flat",
+    "color": "multicolor"
   },
   "player": {
     "color": [

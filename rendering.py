@@ -234,6 +234,7 @@ def draw_hud(
     level_name: str,
     player_alive: bool,
     render_mode: str,
+    color_mode: str,
 ) -> None:
     """Draw HUD text."""
     if render_mode == "ascii":
@@ -242,9 +243,11 @@ def draw_hud(
         mode_label = "Gradient"
     else:
         mode_label = "Flat"
+
+    color_label = "Gray" if color_mode == "gray" else "Multicolor"
     txt = (
-        f"Level: {level_name} | Alive: {player_alive} | Mode: {mode_label} "
-        "| T: ASCII/Flat/Gradient | R: restart | ESC: quit"
+        f"Level: {level_name} | Alive: {player_alive} | Mode: {mode_label} | Color: {color_label} "
+        "| T: ASCII/Flat/Gradient | C: Multicolor/Gray | R: restart | ESC: quit"
     )
     surf.blit(font.render(txt, True, (220, 220, 235)), (12, 10))
     if not player_alive:
@@ -266,6 +269,7 @@ def render_frame(
     font: pygame.font.Font,
     render_mode: str,
     tile_font: pygame.font.Font,
+    color_mode: str,
 ) -> None:
     """Render and present a full frame."""
     mode = render_mode if render_mode in ("ascii", "flat", "gradient") else "flat"
@@ -283,5 +287,5 @@ def render_frame(
     )
     draw_player(screen, player, camera, mode)
     draw_grid(screen, show_grid, camera, window_w, window_h, tile_size, grid_color)
-    draw_hud(screen, font, level.name, player.alive, mode)
+    draw_hud(screen, font, level.name, player.alive, mode, color_mode)
     pygame.display.flip()

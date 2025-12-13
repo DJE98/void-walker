@@ -13,7 +13,8 @@ from models import Level, TriggerTile
 from music_controller import MusicController
 from player import Player
 from rendering import render_frame
-from utils import as_color, deep_get, deep_merge
+from utils import apply_color_mode, as_color, deep_get, deep_merge
+from game_types import Color
 
 
 class Game:
@@ -78,7 +79,7 @@ class Game:
         """Apply merged config for the current level."""
         self.active_cfg = cfg
         self.tile_size = int(cfg.get("tile_size", 48))
-        self.legend = parse_legend(cfg)
+        self.color_mode = self._parse_color_mode(cfg)
         self._apply_render_mode(cfg)
 
         if is_initial:
@@ -86,9 +87,8 @@ class Game:
             self.window_h = int(deep_get(cfg, "window.height", 600))
             self.title = str(deep_get(cfg, "window.title", "ASCII Side-Scroller"))
 
-        self.bg = as_color(deep_get(cfg, "window.bg", [18, 20, 28]), (18, 20, 28))
-        self.grid_color = as_color(deep_get(cfg, "window.grid", [126, 126, 126]), (126, 126, 126))
         self.show_grid = bool(deep_get(cfg, "render.show_grid", False))
+        self._refresh_colors()
         if hasattr(self, "tile_font"):
             self._update_tile_font()
 
@@ -111,6 +111,36 @@ class Game:
             mode = "flat"
 
         self.render_mode = mode
+
+    def _parse_color_mode(self, cfg: Dict[str, Any]) -> str:
+        """Return the configured color mode (multicolor|gray)."""
+        color_mode = deep_get(cfg, "render.color", "multicolor")
+        if isinstance(color_mode, str):
+            color_mode = color_mode.lower()
+        else:
+            color_mode = "multicolor"
+        if color_mode not in ("multicolor", "gray"):
+            color_mode = "multicolor"
+        return color_mode
+
+    def _apply_color_mode(self, color: Color) -> Color:
+        """Transform a color according to the current color mode."""
+        return apply_color_mode(color, self.color_mode)
+
+    def _refresh_colors(self) -> None:
+        """Recompute colorized resources for the current color mode."""
+        self.legend = parse_legend(self.active_cfg, self.color_mode)
+        base_bg = as_color(deep_get(self.active_cfg, "window.bg", [18, 20, 28]), (18, 20, 28))
+        self.bg = self._apply_color_mode(base_bg)
+        base_grid = as_color(deep_get(self.active_cfg, "window.grid", [126, 126, 126]), (126, 126, 126))
+        self.grid_color = self._apply_color_mode(base_grid)
+
+        if hasattr(self, "player"):
+            base_player_color = as_color(
+                deep_get(self.active_cfg, "player.color", [235, 240, 255]),
+                (235, 240, 255),
+            )
+            self.player.cfg.color = self._apply_color_mode(base_player_color)
 
     def _init_music(self) -> None:
         """Initialize music controller and start playback."""
@@ -151,7 +181,7 @@ class Game:
 
     def _create_player(self, level: Level) -> Player:
         """Create a player using config and level spawn."""
-        pconf = parse_player_config(self.active_cfg.get("player", {}))
+        pconf = parse_player_config(self.active_cfg.get("player", {}), color_mode=self.color_mode)
         return Player(pconf, level.spawn_px, self.tile_size)
 
     # ----------------------------
@@ -256,6 +286,8 @@ class Game:
             self.restart_level()
         if key == pygame.K_t:
             self._toggle_render_mode()
+        if key == pygame.K_c:
+            self._toggle_color_mode()
         return True
 
     def _toggle_render_mode(self) -> None:
@@ -267,6 +299,11 @@ class Game:
             idx = 0
         nxt = order[(idx + 1) % len(order)]
         self.render_mode = nxt
+
+    def _toggle_color_mode(self) -> None:
+        """Toggle render color mode between multicolor and gray."""
+        self.color_mode = "gray" if self.color_mode == "multicolor" else "multicolor"
+        self._refresh_colors()
 
     def _handle_events(self) -> bool:
         """Process pygame events.
@@ -307,6 +344,7 @@ class Game:
                 font=self.font,
                 render_mode=self.render_mode,
                 tile_font=self.tile_font,
+                color_mode=self.color_mode,
             )
 
         pygame.quit()

@@ -22,6 +22,7 @@ The player moves left/right, jumps under gravity, **collides with solid tiles**,
 - **R**: restart current level (respawn at `S`)
 - **ESC**: quit
 - **T**: cycle render modes (ASCII → Flat Color → Gradient)
+- **C**: toggle render color mode (Multicolor ↔ Gray) — shown in the HUD
 - **F**: fire a fireball (if `fireball` upgrade enabled)
 - **Shift**:
   - run faster (if `speed` upgrade affects “run mode”), or
@@ -55,6 +56,7 @@ The player moves left/right, jumps under gravity, **collides with solid tiles**,
 - `render`: rendering tweaks
   - `show_grid`: enable grid overlay
   - `mode`: `"ascii" | "flat" | "gradient"` (per-level override supported); runtime toggle via `T`
+  - `color`: `"multicolor" | "gray"` (per-level override supported); runtime toggle via `C`
 - `player`: default movement/physics (speed, jump_strength, gravity, max_fall)
 - `currentLevel`: starting level name
 - `legend`: tile definitions (the “rules engine”)

@@ -2,7 +2,7 @@
   "player": {
     "gravity": [-150, 900]
   },
-  "render": { "mode": "gradient" },
+  "render": { "mode": "gradient", "color": "multicolor" },
   "music": {
     "playlist": ["steady-rap-beat-20231220-182861.mp3"]
   },

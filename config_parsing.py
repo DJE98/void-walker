@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, Tuple
 
 from models import PlayerConfig, TileSpec
-from utils import as_color
+from utils import apply_color_mode, as_color
 
 
 def _parse_gravity(raw_gravity: Any) -> Tuple[float, float]:
@@ -24,17 +24,20 @@ def _parse_gravity(raw_gravity: Any) -> Tuple[float, float]:
     return default
 
 
-def parse_player_config(raw: Dict[str, Any]) -> PlayerConfig:
+def parse_player_config(raw: Dict[str, Any], color_mode: str = "multicolor") -> PlayerConfig:
     """Parse player settings from config data.
 
     Args:
         raw: Dict containing player settings.
+        color_mode: Color rendering mode (multicolor|gray).
 
     Returns:
         PlayerConfig with defaults applied.
     """
+    color = as_color(raw.get("color", [235, 240, 255]), (235, 240, 255))
+    color = apply_color_mode(color, color_mode)
     return PlayerConfig(
-        color=as_color(raw.get("color", [235, 240, 255]), (235, 240, 255)),
+        color=color,
         speed=float(raw.get("speed", 260)),
         jump_strength=float(raw.get("jump_strength", 560)),
         gravity=_parse_gravity(raw.get("gravity")),
@@ -42,7 +45,7 @@ def parse_player_config(raw: Dict[str, Any]) -> PlayerConfig:
     )
 
 
-def parse_legend(cfg: Dict[str, Any]) -> Dict[str, TileSpec]:
+def parse_legend(cfg: Dict[str, Any], color_mode: str = "multicolor") -> Dict[str, TileSpec]:
     """Parse the tile legend from config data."""
     legend_raw = cfg.get("legend", {})
     legend: Dict[str, TileSpec] = {}
@@ -56,7 +59,8 @@ def parse_legend(cfg: Dict[str, Any]) -> Dict[str, TileSpec]:
 
         shape = str(raw.get("shape", "none")).lower()
         solid = bool(raw.get("solid", False))
-        color = None if shape == "none" else as_color(raw.get("color"), (200, 60, 220))
+        base_color = None if shape == "none" else as_color(raw.get("color"), (200, 60, 220))
+        color = apply_color_mode(base_color, color_mode) if base_color is not None else None
 
         on_col = raw.get("on_collision", {})
         if not isinstance(on_col, dict):

@@ -33,6 +33,17 @@ def as_color(value: Any, default: Color) -> Color:
     return default
 
 
+def apply_color_mode(color: Color, mode: str) -> Color:
+    """Transform a color according to the chosen render color mode."""
+    if mode != "gray":
+        return color
+
+    r, g, b = color
+    gray = int(0.299 * r + 0.587 * g + 0.114 * b)
+    gray = clamp_int(gray, 0, 255)
+    return (gray, gray, gray)
+
+
 def deep_get(d: Dict[str, Any], path: str, default: Any) -> Any:
     """Get a nested value from a dict using a dotted path.
 
