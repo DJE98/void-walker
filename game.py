@@ -79,7 +79,7 @@ class Game:
         self.active_cfg = cfg
         self.tile_size = int(cfg.get("tile_size", 48))
         self.legend = parse_legend(cfg)
-        self.ascii_text_mode = bool(deep_get(cfg, "render.ascii_text_mode", False))
+        self._apply_render_mode(cfg)
 
         if is_initial:
             self.window_w = int(deep_get(cfg, "window.width", 1000))
@@ -91,6 +91,28 @@ class Game:
         self.show_grid = bool(deep_get(cfg, "render.show_grid", False))
         if hasattr(self, "tile_font"):
             self._update_tile_font()
+
+    def _apply_render_mode(self, cfg: Dict[str, Any]) -> None:
+        """Apply render mode string with backward compatibility for old flags."""
+        mode_raw = deep_get(cfg, "render.mode", None)
+        ascii_flag = bool(deep_get(cfg, "render.ascii_text_mode", False))
+        gradient_flag = bool(deep_get(cfg, "render.gradient_mode", False))
+
+        if isinstance(mode_raw, str):
+            mode = mode_raw.lower()
+        elif ascii_flag:
+            mode = "ascii"
+        elif gradient_flag:
+            mode = "gradient"
+        else:
+            mode = "flat"
+
+        if mode not in ("ascii", "flat", "gradient"):
+            mode = "flat"
+
+        self.render_mode = mode
+        self.ascii_text_mode = mode == "ascii"
+        self.gradient_mode = mode == "gradient"
 
     def _init_music(self) -> None:
         """Initialize music controller and start playback."""
@@ -235,8 +257,20 @@ class Game:
         if key == pygame.K_r:
             self.restart_level()
         if key == pygame.K_t:
-            self.ascii_text_mode = not self.ascii_text_mode
+            self._toggle_render_mode()
         return True
+
+    def _toggle_render_mode(self) -> None:
+        """Cycle render mode between ascii -> flat -> gradient."""
+        order = ["ascii", "flat", "gradient"]
+        try:
+            idx = order.index(self.render_mode)
+        except ValueError:
+            idx = 0
+        nxt = order[(idx + 1) % len(order)]
+        self.render_mode = nxt
+        self.ascii_text_mode = nxt == "ascii"
+        self.gradient_mode = nxt == "gradient"
 
     def _handle_events(self) -> bool:
         """Process pygame events.
@@ -277,6 +311,7 @@ class Game:
                 font=self.font,
                 ascii_text_mode=self.ascii_text_mode,
                 tile_font=self.tile_font,
+                gradient_mode=self.gradient_mode,
             )
 
         pygame.quit()

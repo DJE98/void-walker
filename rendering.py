@@ -48,6 +48,7 @@ def draw_tile(
     tile_size: int,
     ascii_text_mode: bool,
     tile_font: pygame.font.Font,
+    gradient_mode: bool,
 ) -> None:
     """Draw a single tile based on its TileSpec."""
     if ascii_text_mode:
@@ -66,13 +67,24 @@ def draw_tile(
 
     r = world_to_screen(world_rect, camera)
 
+    if gradient_mode:
+        _draw_gradient_shape(surf, spec, r, tile_size)
+        return
+
+    _draw_flat_shape(surf, spec, r, tile_size)
+
+
+def _draw_shape_with_color(
+    surf: pygame.Surface, spec: TileSpec, r: pygame.Rect, tile_size: int, color: Color
+) -> None:
+    """Draw a tile using the provided color."""
     if spec.shape == "rect":
-        pygame.draw.rect(surf, spec.color, r)
+        pygame.draw.rect(surf, color, r)
         return
 
     if spec.shape == "circle":
         radius = int(min(r.w, r.h) * 0.33)
-        pygame.draw.circle(surf, spec.color, r.center, radius)
+        pygame.draw.circle(surf, color, r.center, radius)
         return
 
     if spec.shape == "triangle":
@@ -80,10 +92,77 @@ def draw_tile(
         p1 = (r.centerx, r.top + pad)
         p2 = (r.left + pad, r.bottom - pad)
         p3 = (r.right - pad, r.bottom - pad)
-        pygame.draw.polygon(surf, spec.color, [p1, p2, p3])
+        pygame.draw.polygon(surf, color, [p1, p2, p3])
         return
 
-    pygame.draw.rect(surf, spec.color, r)
+    pygame.draw.rect(surf, color, r)
+
+
+def _draw_flat_shape(surf: pygame.Surface, spec: TileSpec, r: pygame.Rect, tile_size: int) -> None:
+    """Draw a tile using flat colors (non-gradient)."""
+    if spec.color is None:
+        return
+    _draw_shape_with_color(surf, spec, r, tile_size, spec.color)
+
+
+def _vertical_gradient_surface(size: Tuple[int, int], top: Color, bottom: Color) -> pygame.Surface:
+    """Create a vertical gradient surface from top to bottom."""
+    w, h = size
+    grad = pygame.Surface((w, h), pygame.SRCALPHA)
+
+    def lerp(a: int, b: int, t: float) -> int:
+        return int(a + (b - a) * t)
+
+    for y in range(h):
+        t = y / max(1, h - 1)
+        color = (
+            lerp(top[0], bottom[0], t),
+            lerp(top[1], bottom[1], t),
+            lerp(top[2], bottom[2], t),
+        )
+        grad.fill(color, pygame.Rect(0, y, w, 1))
+    return grad
+
+
+def _draw_gradient_shape(surf: pygame.Surface, spec: TileSpec, r: pygame.Rect, tile_size: int) -> None:
+    """Draw a tile using a smooth vertical gradient derived from its base color."""
+    base = spec.color
+    if base is None:
+        return
+
+    def clamp(v: int) -> int:
+        return max(0, min(255, v))
+
+    top = (clamp(int(base[0] * 1.05)), clamp(int(base[1] * 1.05)), clamp(int(base[2] * 1.05)))
+    bottom = (clamp(int(base[0] * 0.55)), clamp(int(base[1] * 0.55)), clamp(int(base[2] * 0.55)))
+
+    grad = _vertical_gradient_surface((r.w, r.h), top, bottom)
+
+    if spec.shape == "rect":
+        surf.blit(grad, r)
+        return
+
+    mask = pygame.Surface((r.w, r.h), pygame.SRCALPHA)
+    _draw_shape_with_color(mask, spec, pygame.Rect(0, 0, r.w, r.h), tile_size, (255, 255, 255))
+    grad.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    surf.blit(grad, r.topleft)
+
+
+def _draw_gradient_rect(
+    surf: pygame.Surface, rect: pygame.Rect, color: Color, border_radius: int = 0
+) -> None:
+    """Draw a rounded rect with a smooth vertical gradient derived from base color."""
+    def clamp(v: int) -> int:
+        return max(0, min(255, v))
+
+    top = (clamp(int(color[0] * 1.05)), clamp(int(color[1] * 1.05)), clamp(int(color[2] * 1.05)))
+    bottom = (clamp(int(color[0] * 0.55)), clamp(int(color[1] * 0.55)), clamp(int(color[2] * 0.55)))
+
+    grad = _vertical_gradient_surface((rect.w, rect.h), top, bottom)
+    mask = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+    pygame.draw.rect(mask, (255, 255, 255), pygame.Rect(0, 0, rect.w, rect.h), border_radius=border_radius)
+    grad.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    surf.blit(grad, rect.topleft)
 
 
 def draw_level_tiles(
@@ -96,23 +175,25 @@ def draw_level_tiles(
     tile_size: int,
     ascii_text_mode: bool,
     tile_font: pygame.font.Font,
+    gradient_mode: bool,
 ) -> None:
     """Draw all visible tiles for the current level."""
     ts = tile_size
     for x, y, ch in iter_visible_tiles(level, camera, window_w, window_h, tile_size):
         spec = legend.get(ch, legend["."])
         world_rect = pygame.Rect(x * ts, y * ts, ts, ts)
-        draw_tile(surf, spec, world_rect, camera, tile_size, ascii_text_mode, tile_font)
+        draw_tile(surf, spec, world_rect, camera, tile_size, ascii_text_mode, tile_font, gradient_mode)
 
 
-def draw_player(surf: pygame.Surface, player: Player, camera: pygame.Vector2) -> None:
+def draw_player(
+    surf: pygame.Surface, player: Player, camera: pygame.Vector2, gradient_mode: bool = False
+) -> None:
     """Draw the player."""
-    pygame.draw.rect(
-        surf,
-        player.cfg.color,
-        world_to_screen(player.rect, camera),
-        border_radius=8,
-    )
+    rect = world_to_screen(player.rect, camera)
+    if gradient_mode:
+        _draw_gradient_rect(surf, rect, player.cfg.color, border_radius=8)
+    else:
+        pygame.draw.rect(surf, player.cfg.color, rect, border_radius=8)
 
 
 def draw_grid(
@@ -152,12 +233,18 @@ def draw_hud(
     level_name: str,
     player_alive: bool,
     ascii_text_mode: bool,
+    gradient_mode: bool,
 ) -> None:
     """Draw HUD text."""
-    mode_label = "ASCII" if ascii_text_mode else "Shapes"
+    if ascii_text_mode:
+        mode_label = "ASCII"
+    elif gradient_mode:
+        mode_label = "Gradient"
+    else:
+        mode_label = "Flat"
     txt = (
         f"Level: {level_name} | Alive: {player_alive} | Mode: {mode_label} "
-        "| T: toggle mode | R: restart | ESC: quit"
+        "| T: ASCII/Flat/Gradient | R: restart | ESC: quit"
     )
     surf.blit(font.render(txt, True, (220, 220, 235)), (12, 10))
     if not player_alive:
@@ -179,6 +266,7 @@ def render_frame(
     font: pygame.font.Font,
     ascii_text_mode: bool,
     tile_font: pygame.font.Font,
+    gradient_mode: bool,
 ) -> None:
     """Render and present a full frame."""
     screen.fill(bg)
@@ -192,8 +280,9 @@ def render_frame(
         tile_size,
         ascii_text_mode,
         tile_font,
+        gradient_mode,
     )
-    draw_player(screen, player, camera)
+    draw_player(screen, player, camera, gradient_mode=gradient_mode and not ascii_text_mode)
     draw_grid(screen, show_grid, camera, window_w, window_h, tile_size, grid_color)
-    draw_hud(screen, font, level.name, player.alive, ascii_text_mode)
+    draw_hud(screen, font, level.name, player.alive, ascii_text_mode, gradient_mode)
     pygame.display.flip()
