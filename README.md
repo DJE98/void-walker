@@ -69,6 +69,7 @@ Retro‑futuristic, hostile, playful in presentation, ruthless in consequence. T
 ### Key sections
 - `tile_size`: pixel size of a tile
 - `window`: width/height/title/bg/grid color
+- `fullscreen`: `true/false` to start in fullscreen; toggle at runtime via `F11` (or `F`)
 - `render`: rendering tweaks
   - `show_grid`: enable grid overlay
   - `mode`: `"ascii" | "flat" | "gradient"` (per-level override supported); runtime toggle via `T`
