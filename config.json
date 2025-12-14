@@ -30,14 +30,7 @@
     "shape": "triangle",
     "orientation": "down",
     "ascii_char": "V",
-<<<<<<< HEAD
     "gravity": [0, 500],
-=======
-    "gravity": [
-      0,
-      1700
-    ],
->>>>>>> 4f9a1f92ab74e16945edb19a9d691570073f206c
     "max_fall": 1000,
     "score": 1,
     "_max_x_tile_reached": 0,
