@@ -77,6 +77,7 @@ Retro‑futuristic, hostile, playful in presentation, ruthless in consequence. T
 - `player`: default movement/physics (speed, jump_strength, gravity, max_fall)
   - `color`: base tint (honors render color mode)
   - `shape`: `"rect" | "circle" | "triangle"`
+  - `orientation`: `"up" | "down"` (useful for triangles)
   - `ascii_char`: single-character glyph used in ASCII render mode
 - `currentLevel`: starting level name
 - `legend`: tile definitions (the “rules engine”)
@@ -90,6 +91,7 @@ Retro‑futuristic, hostile, playful in presentation, ruthless in consequence. T
 ### Legend rules (tile definitions)
 Each tile character maps to:
 - `shape`: `"none" | "rect" | "circle" | "triangle"`
+- `orientation`: `"up" | "down"` (mainly relevant for triangles)
 - `color`: `[r,g,b]` (optional if `shape="none"`)
 - `solid`: `true/false`
 - `title` / `description` (optional): when present, a small overlay is rendered above the tile to explain what it does

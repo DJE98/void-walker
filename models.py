@@ -13,6 +13,7 @@ from utils import clamp_int
 class TileSpec:
     char: str
     shape: str  # none|rect|circle|triangle
+    orientation: str  # up|down (kept for all shapes; used by triangles)
     color: Optional[Color]  # None if shape == none
     solid: bool
     on_collision: Dict[str, Any]
@@ -41,6 +42,7 @@ class Level:
 class PlayerConfig:
     color: Color
     shape: str  # rect|circle|triangle
+    orientation: str  # up|down (kept for all shapes; used by triangles)
     ascii_char: str
     gravity: Tuple[float, float]
     max_fall: float

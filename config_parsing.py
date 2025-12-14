@@ -42,6 +42,15 @@ def _parse_gravity(raw_gravity: Any) -> Tuple[float, float]:
     return default
 
 
+def _parse_orientation(raw: Any) -> str:
+    """Parse orientation into 'up' or 'down' (defaults to up)."""
+    if isinstance(raw, str):
+        val = raw.strip().lower()
+        if val in ("up", "down"):
+            return val
+    return "up"
+
+
 def parse_player_config(raw: Dict[str, Any], color_mode: str = "multicolor") -> PlayerConfig:
     """Parse player settings from config data.
 
@@ -54,8 +63,15 @@ def parse_player_config(raw: Dict[str, Any], color_mode: str = "multicolor") -> 
     """
     color = as_color(raw.get("color", [235, 240, 255]), (235, 240, 255))
     color = apply_color_mode(color, color_mode)
-    shape = str(raw.get("shape", "rect")).lower()
-    if shape not in ("rect", "circle", "triangle"):
+    shape_raw = str(raw.get("shape", "rect")).lower()
+    orientation = _parse_orientation(raw.get("orientation"))
+    if "triangle" in shape_raw:
+        shape = "triangle"
+        if orientation == "up" and "down" in shape_raw:
+            orientation = "down"
+    elif shape_raw in ("rect", "circle"):
+        shape = shape_raw
+    else:
         shape = "rect"
     ascii_char_raw = raw.get("ascii_char", "@")
     ascii_char = "@" if ascii_char_raw is None else str(ascii_char_raw)
@@ -65,6 +81,7 @@ def parse_player_config(raw: Dict[str, Any], color_mode: str = "multicolor") -> 
     return PlayerConfig(
         color=color,
         shape=shape,
+        orientation=orientation,
         ascii_char=ascii_char,
         gravity=_parse_gravity(raw.get("gravity")),
         max_fall=float(raw.get("max_fall", 1000)),
@@ -98,7 +115,16 @@ def parse_legend(cfg: Dict[str, Any], color_mode: str = "multicolor") -> Dict[st
         if not isinstance(ch, str) or len(ch) != 1 or not isinstance(raw, dict):
             continue
 
-        shape = str(raw.get("shape", "none")).lower()
+        shape_raw = str(raw.get("shape", "none")).lower()
+        orientation = _parse_orientation(raw.get("orientation"))
+        if "triangle" in shape_raw:
+            shape = "triangle"
+            if orientation == "up" and "down" in shape_raw:
+                orientation = "down"
+        elif shape_raw in ("rect", "circle", "none"):
+            shape = shape_raw
+        else:
+            shape = "none"
         solid = bool(raw.get("solid", False))
         base_color = None if shape == "none" else as_color(raw.get("color"), (200, 60, 220))
         color = apply_color_mode(base_color, color_mode) if base_color is not None else None
@@ -116,6 +142,7 @@ def parse_legend(cfg: Dict[str, Any], color_mode: str = "multicolor") -> Dict[st
         legend[ch] = TileSpec(
             char=ch,
             shape=shape,
+            orientation=orientation,
             color=color,
             solid=solid,
             on_collision=on_col,
@@ -127,6 +154,7 @@ def parse_legend(cfg: Dict[str, Any], color_mode: str = "multicolor") -> Dict[st
         legend["."] = TileSpec(
             char=".",
             shape="none",
+            orientation="up",
             color=None,
             solid=False,
             on_collision={},

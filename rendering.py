@@ -82,6 +82,7 @@ def _draw_shape_with_color(
     surf: pygame.Surface, spec: TileSpec, r: pygame.Rect, tile_size: int, color: Color
 ) -> None:
     """Draw a tile using the provided color."""
+    orientation = spec.orientation if spec.orientation in ("up", "down") else "up"
     if spec.shape == "rect":
         pygame.draw.rect(surf, color, r)
         return
@@ -93,9 +94,14 @@ def _draw_shape_with_color(
 
     if spec.shape == "triangle":
         pad = int(tile_size * 0.15)
-        p1 = (r.centerx, r.top + pad)
-        p2 = (r.left + pad, r.bottom - pad)
-        p3 = (r.right - pad, r.bottom - pad)
+        if orientation == "down":
+            p1 = (r.centerx, r.bottom - pad)
+            p2 = (r.left + pad, r.top + pad)
+            p3 = (r.right - pad, r.top + pad)
+        else:
+            p1 = (r.centerx, r.top + pad)
+            p2 = (r.left + pad, r.bottom - pad)
+            p3 = (r.right - pad, r.bottom - pad)
         pygame.draw.polygon(surf, color, [p1, p2, p3])
         return
 
@@ -350,6 +356,7 @@ def draw_tile_labels(
         TileSpec(
             char=".",
             shape="none",
+            orientation="up",
             color=None,
             solid=False,
             on_collision={},
@@ -457,15 +464,21 @@ def _draw_player_shape(
     render_mode: str,
     shape: str,
     color: Color,
+    orientation: str,
     tile_size: int,
 ) -> None:
     """Render the player using the configured shape."""
     shape = shape if shape in ("rect", "circle", "triangle") else "rect"
+    orientation = orientation if orientation in ("up", "down") else "up"
     if render_mode == "gradient":
-        spec = TileSpec(char="@", shape=shape, color=color, solid=False, on_collision={})
+        spec = TileSpec(
+            char="@", shape=shape, orientation=orientation, color=color, solid=False, on_collision={}
+        )
         _draw_gradient_shape(surf, spec, rect, tile_size)
     else:
-        spec = TileSpec(char="@", shape=shape, color=color, solid=False, on_collision={})
+        spec = TileSpec(
+            char="@", shape=shape, orientation=orientation, color=color, solid=False, on_collision={}
+        )
         _draw_flat_shape(surf, spec, rect, tile_size)
 
 
@@ -488,6 +501,7 @@ def draw_player(
         render_mode,
         player.cfg.shape,
         player.cfg.color,
+        player.cfg.orientation,
         tile_size,
     )
 

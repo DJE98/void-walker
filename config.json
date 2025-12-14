@@ -28,6 +28,7 @@
       255
     ],
     "shape": "triangle",
+    "orientation": "down",
     "ascii_char": "V",
     "gravity": [0, 1700],
     "max_fall": 1000,
