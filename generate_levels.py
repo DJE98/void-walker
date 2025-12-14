@@ -225,6 +225,7 @@ class EnvironmentPainter:
         self._paint_platform_layers(gb, diff)
         self._paint_islands(gb, diff)
         self._paint_columns(gb, diff)
+        self._paint_stair_connectors(gb, diff) 
         self._paint_dead_ends(gb, diff)
 
     def _paint_floor_band(self, gb: GridBuilder, diff: float) -> None:
@@ -285,6 +286,19 @@ class EnvironmentPainter:
                     gb.set(xx, y, "=")
 
     def _paint_columns(self, gb: GridBuilder, diff: float) -> None:
+        """
+        OLD: tall solid '#' columns (blocked paths)
+        NEW: stairs + broken 'ruin pillars' with windows (still looks cyber/ruined, but playable)
+        """
+        structure_count = clamp_int(int(gb.width * (0.10 - diff * 0.04)) + (gb.height // 18), 4, 24)
+
+        for _ in range(structure_count):
+            if self.rng.random() < 0.70:
+                self._paint_staircase(gb, diff)
+            else:
+                self._paint_ruin_pillar_with_windows(gb, diff)
+
+    def _paint_columns_old(self, gb: GridBuilder, diff: float) -> None:
         # Columns give that "old computer platformer" vibe.
         # Early: more columns; later: fewer.
         column_count = int(
@@ -314,6 +328,73 @@ class EnvironmentPainter:
                 for y in range(top, bottom):
                     gb.set(x, y, "#")
 
+    def _paint_staircase(self, gb: GridBuilder, diff: float) -> None:
+        # stairs are '=' blocks in a diagonal (walk/jump 1-tile steps)
+        steps = self.rng.randint(5, 10 + int(diff * 10))
+        rise = self.rng.choice([-1, 1])  # -1 goes up, +1 goes down
+        run_dir = self.rng.choice([1, -1])
+
+        # choose a safe starting position
+        x0 = self.rng.randint(2, gb.width - 3 - steps) if run_dir == 1 else self.rng.randint(2 + steps, gb.width - 3)
+        y0 = self.rng.randint(3, gb.height - 6)
+
+        # small landing at start
+        for lx in range(0, self.rng.randint(2, 4)):
+            xx = x0 + lx * run_dir
+            if 1 <= xx <= gb.width - 2:
+                gb.set(xx, y0, "=")
+
+        x, y = x0, y0
+        for _ in range(steps):
+            if not (2 <= x <= gb.width - 3 and 2 <= y <= gb.height - 4):
+                break
+            gb.set(x, y, "=")
+            x += run_dir
+            y += rise
+
+        # small landing at end
+        for lx in range(0, self.rng.randint(2, 4)):
+            xx = x + lx * run_dir
+            if 1 <= xx <= gb.width - 2 and 1 <= y <= gb.height - 2:
+                gb.set(xx, y, "=")
+
+
+    def _paint_ruin_pillar_with_windows(self, gb: GridBuilder, diff: float) -> None:
+        """
+        A vertical structure that LOOKS like a pillar but has holes/windows so it doesn't block play.
+        Uses '#' sparsely; keeps it from becoming a full wall.
+        """
+        x = self.rng.randint(2, gb.width - 3)
+        top = self.rng.randint(2, gb.height // 2)
+        bottom = self.rng.randint(gb.height // 2, gb.height - 3)
+
+        # if too short, skip
+        if bottom - top < 4:
+            return
+
+        window_rate = 0.45 + diff * 0.25  # more holes later (less blocking)
+        for y in range(top, bottom):
+            if self.rng.random() < window_rate:
+                # hole
+                if gb.get(x, y) == "#":
+                    gb.set(x, y, ".")
+            else:
+                # solid segment (but only 1-tile wide)
+                if gb.get(x, y) == ".":
+                    gb.set(x, y, "#")
+
+    def _paint_stair_connectors(self, gb: GridBuilder, diff: float) -> None:
+        """
+        Connects different platform layers using staircases.
+        Early: more connectors (dense labyrinth)
+        Late: fewer connectors (more void / risk)
+        """
+        # early dense, later sparser
+        density = 0.10 - diff * 0.05
+        count = clamp_int(int(gb.width * density) + (gb.height // 20), 3, 22)
+
+        for _ in range(count):
+            self._paint_staircase(gb, diff)
 
     def _paint_dead_ends(self, gb: GridBuilder, diff: float) -> None:
         # Adds platforms that lead to nowhere ("into nothingness").
@@ -342,6 +423,24 @@ class VoidCarver:
         self.rng = rng
 
     def carve(self, gb: GridBuilder, level_index: int) -> None:
+        diff = min(1.0, (max(1, level_index) - 1) / 30.0)
+
+        floor_y = gb.height - 2
+
+        # later levels: more + wider pits
+        pit_count = clamp_int(int(gb.width * (0.04 + diff * 0.10)), 1, 30)
+
+        for _ in range(pit_count):
+            pit_w = self.rng.randint(2, 4 + int(diff * 10))
+            pit_h = self.rng.randint(3, 6 + int(diff * 18))
+
+            x0 = self.rng.randint(2, gb.width - 3 - pit_w)
+            y0 = clamp_int(floor_y - pit_h, 2, floor_y - 1)
+
+            # clear a vertical "pit" area (keeps upper world nicer than clearing random mid rectangles)
+            gb.clear_rect(x0, y0, x0 + pit_w, floor_y - 1)
+
+    def carve_old(self, gb: GridBuilder, level_index: int) -> None:
         diff = min(1.0, (max(1, level_index) - 1) / 30.0)
         # early: little carving, late: lots
         shafts = int((gb.width / 25.0) * (0.6 + diff * 3.0))
@@ -582,26 +681,33 @@ class ExtrasPlacer:
 
         # upgrades/downgrades very rare
         orb_chars = ["1", "2", "3", "4", "5", "6", "7", "8"]
-        orb_count = 0
-        if self.rng.random() < (0.18 + diff * 0.12):
-            orb_count += 1
-        if self.rng.random() < (0.08 + diff * 0.10):
-            orb_count += 1
 
-        for _ in range(orb_count):
-            x = self._pick_x(ground_y_for_x, spawn_x, goal_x, margin=12)
+        # REQUIRED: at least 1 per level, up to width/30
+        max_orbs = max(1, gb.width // 30)
+        orb_count = self.rng.randint(1, max_orbs)
+
+        placed = 0
+        attempts = orb_count * 30  # plenty of tries to find valid spots
+        while placed < orb_count and attempts > 0:
+            attempts -= 1
+
+            x = self._pick_x(ground_y_for_x, spawn_x, goal_x, margin=10)
             if x is None:
-                return
+                break
             gy = ground_y_for_x[x]
             if gy is None:
                 continue
+
+            # put orb on a small optional platform (so it feels like a pickup)
             plat_y = clamp_int(gy - self.rng.randint(1, 3), 2, gb.height - 4)
             for xx in range(x, min(gb.width - 2, x + self.rng.randint(1, 3))):
                 gb.set(xx, plat_y, "=")
-            orb_x = x
+
+            orb_x = x + self.rng.randint(0, 1)  # tiny variation
             orb_y = plat_y - 1
             if gb.get(orb_x, orb_y) == ".":
                 gb.set(orb_x, orb_y, self.rng.choice(orb_chars))
+                placed += 1
 
     def _pick_x(
         self,
@@ -857,6 +963,8 @@ class LevelGenerator:
                 level_index=idx,
             )
 
+            self._carve_corridor_along_main_path(gb, ground_y_for_x)
+
             # Place goal near right border at varied height (based on final path height)
             goal_y = clamp_int(final_ground_y - 1, 1, h - 3)
             # Ensure support under goal
@@ -886,6 +994,33 @@ class LevelGenerator:
         raise RuntimeError(
             f"Failed to generate a reachable map for level{idx} after many attempts."
         )
+    
+    def _carve_corridor_along_main_path(self, gb: GridBuilder, ground_y_for_x: Sequence[Optional[int]]) -> None:
+        """
+        Randomly punch openings through vertical '#' columns near the main path.
+        Clears headroom above '=' but only at random x positions, and clears 1..3 columns wide.
+        """
+        for x, ground_y in enumerate(ground_y_for_x):
+            if ground_y is None:
+                continue
+
+            # Random chance to carve at this x (tune these to taste)
+            if self.rng.random() > 0.35:
+                continue
+
+            # Clear 1..3 columns wide centered near x
+            half_span = self.rng.randint(0, 1)  # 0 => 1-wide, 1 => up to 3-wide
+            x0 = clamp_int(x - half_span, 1, gb.width - 2)
+            x1 = clamp_int(x + half_span, 1, gb.width - 2)
+
+            for xx in range(x0, x1 + 1):
+                # Clear 2-3 tiles of headroom (randomly 2 or 3)
+                headroom = self.rng.randint(2, 3)
+                for dy in range(1, headroom + 1):
+                    y = ground_y - dy
+                    if 1 <= y <= gb.height - 2 and gb.get(xx, y) == "#":
+                        gb.set(xx, y, ".")
+
 
 
 # ----------------------------
