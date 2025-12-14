@@ -1,11 +1,16 @@
 {
+"render": {
+    "show_grid": false,
+    "mode": "flat",
+    "color": "multicolor"
+  },	
   "music": {
     "playlist": [
-      "cool-hiphop-rap-beat-20230307-191928.mp3"
+      "steady-rap-beat-20231220-182861.mp3"
     ],
     "bitcrusher": {
-      "bits": 8,
-      "sample_rate": 8000
+      "bits": 16,
+      "sample_rate": 12000
     }
   },
   "currentLevel": "Level3",
