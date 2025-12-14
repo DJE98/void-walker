@@ -4,6 +4,11 @@
     "bg": [14, 18, 30]
   },
   "render": { "show_grid": true, "mode": "ascii", "color": "gray" },
+  "introduction": {
+    "description": "Welcome to Level 1. Move with A/D or the arrow keys, jump with Space or W/Up. Reach the goal to advance.",
+    "image": "assets/logo.png",
+    "button_text": "Continue"
+  },
   "player": {
     "color": [210, 230, 255],
     "gravity": [120, 1550]

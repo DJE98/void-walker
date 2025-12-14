@@ -12,7 +12,7 @@ from level_loader import find_level_config_path, load_level, resolve_level_name
 from models import Level, TriggerTile
 from music_controller import MusicController
 from player import Player
-from rendering import render_frame
+from rendering import GameRenderer
 from scoreboard import ScoreboardFile, ScoreEntry, now_iso
 from utils import apply_color_mode, as_color, deep_get, deep_merge
 from game_types import Color
@@ -58,7 +58,11 @@ class Game:
 
         self._init_pygame()
         self._init_ui()
+        self._prepare_introduction_overlay()
         self._init_music()
+        self.renderer = GameRenderer(
+            self.window_w, self.window_h, self.font, self.label_font, self.tile_font
+        )
 
         self.level = self._build_level_from_active_cfg()
         self.player = self._create_player(self.level)
@@ -80,6 +84,8 @@ class Game:
         """Create/update the font used for ASCII tile rendering."""
         size = max(12, int(self.tile_size * 0.7))
         self.tile_font = pygame.font.SysFont("monospace", size)
+        if hasattr(self, "renderer"):
+            self.renderer.update_fonts(self.font, self.label_font, self.tile_font)
 
     def _init_ui(self) -> None:
         """Initialize UI resources."""
@@ -121,6 +127,61 @@ class Game:
         self._refresh_colors()
         if hasattr(self, "tile_font"):
             self._update_tile_font()
+
+    def _prepare_introduction_overlay(self) -> None:
+        """Load introduction overlay content for the active level."""
+        intro_raw = self.active_cfg.get("introduction", {})
+        self.introduction: Optional[Dict[str, Any]] = None
+        self.intro_visible: bool = False
+        self.intro_button_rect: Optional[pygame.Rect] = None
+
+        if not isinstance(intro_raw, dict):
+            return
+
+        def _clean(value: Any) -> Optional[str]:
+            if isinstance(value, str):
+                txt = value.strip()
+                return txt if txt else None
+            return None
+
+        title = _clean(intro_raw.get("title"))
+        description = _clean(intro_raw.get("description") or intro_raw.get("text"))
+        image_path_raw = _clean(intro_raw.get("image"))
+        button_text = _clean(intro_raw.get("button_text")) or "Continue"
+        next_level = _clean(intro_raw.get("next_level"))
+
+        if not any([title, description, image_path_raw]):
+            return
+
+        image_surface = None
+        if image_path_raw:
+            image_surface = self._load_intro_image(image_path_raw)
+
+        self.introduction = {
+            "title": title,
+            "description": description,
+            "image": image_surface,
+            "button_text": button_text,
+            "next_level": next_level,
+        }
+        self.intro_visible = True
+
+    def _load_intro_image(self, path_str: str) -> Optional[pygame.Surface]:
+        """Load an introduction image safely."""
+        candidates = []
+        raw_path = Path(path_str)
+        candidates.append(raw_path)
+        if not raw_path.is_absolute():
+            candidates.append(self.levels_dir / raw_path)
+            candidates.append(self.levels_dir / self.current_level_name / raw_path)
+
+        for img_path in candidates:
+            try:
+                if img_path.exists():
+                    return pygame.image.load(img_path.as_posix()).convert_alpha()
+            except pygame.error:
+                continue
+        return None
 
     def _apply_render_mode(self, cfg: Dict[str, Any]) -> None:
         """Apply render mode string with backward compatibility for old flags."""
@@ -238,6 +299,7 @@ class Game:
         self.current_level_name = resolved
         self.current_level_override = level_cfg_override
         self._apply_active_config(merged_cfg)
+        self._prepare_introduction_overlay()
         return self._build_level_from_active_cfg()
 
     def _switch_to_level(self, name: str) -> None:
@@ -476,7 +538,21 @@ class Game:
             if e.type == pygame.KEYDOWN:
                 if not self._handle_keydown(e.key):
                     return False
+            if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                self._handle_mouse_click(e.pos)
         return True
+
+    def _handle_mouse_click(self, pos: Tuple[int, int]) -> None:
+        """Handle mouse input (used for intro overlay button)."""
+        if self.intro_visible and self.intro_button_rect and self.intro_button_rect.collidepoint(pos):
+            self._dismiss_introduction()
+
+    def _dismiss_introduction(self) -> None:
+        """Hide the introduction overlay and honor any intro-specific requests."""
+        self.intro_visible = False
+        self.intro_button_rect = None
+        if self.introduction and self.introduction.get("next_level"):
+            self.pending_level_name = str(self.introduction["next_level"])
 
     def run(self) -> None:
         """Run the main game loop."""
@@ -485,25 +561,40 @@ class Game:
             dt = self._tick_dt()
             running = self._handle_events()
 
+            intro_data = self.introduction if self.intro_visible else None
+            if intro_data:
+                # Pause simulation while the intro overlay is visible.
+                self._update_music()
+                self.intro_button_rect = self.renderer.render_frame(
+                    screen=self.screen,
+                    bg=self.bg,
+                    level=self.level,
+                    legend=self.legend,
+                    player=self.player,
+                    camera=self.camera,
+                    tile_size=self.tile_size,
+                    show_grid=self.show_grid,
+                    grid_color=self.grid_color,
+                    render_mode=self.render_mode,
+                    color_mode=self.color_mode,
+                    introduction=intro_data,
+                )
+                continue
+
             keys = pygame.key.get_pressed()
             self.update(dt, keys)
 
-            render_frame(
+            self.intro_button_rect = self.renderer.render_frame(
                 screen=self.screen,
                 bg=self.bg,
                 level=self.level,
                 legend=self.legend,
                 player=self.player,
                 camera=self.camera,
-                window_w=self.window_w,
-                window_h=self.window_h,
                 tile_size=self.tile_size,
                 show_grid=self.show_grid,
                 grid_color=self.grid_color,
-                font=self.font,
-                label_font=self.label_font,
                 render_mode=self.render_mode,
-                tile_font=self.tile_font,
                 color_mode=self.color_mode,
             )
 

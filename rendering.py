@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Iterable, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pygame
 
@@ -199,6 +199,119 @@ def _draw_gradient_rect(
     surf.blit(grad, rect.topleft)
 
 
+def _wrap_text(text: str, font: pygame.font.Font, max_width: int) -> List[str]:
+    """Simple word-wrap helper returning list of wrapped lines."""
+    words = text.split()
+    lines: List[str] = []
+    cur = ""
+    for word in words:
+        candidate = word if not cur else f"{cur} {word}"
+        if font.size(candidate)[0] <= max_width:
+            cur = candidate
+        else:
+            if cur:
+                lines.append(cur)
+            cur = word
+    if cur:
+        lines.append(cur)
+    return lines
+
+
+def _scale_image_to_fit(
+    image: pygame.Surface, max_width: int, max_height: int
+) -> pygame.Surface:
+    """Return the image scaled to fit within max dimensions (keeps aspect ratio)."""
+    width, height = image.get_size()
+    if width <= max_width and height <= max_height:
+        return image
+    scale = min(max_width / max(1, width), max_height / max(1, height))
+    new_size = (max(1, int(width * scale)), max(1, int(height * scale)))
+    return pygame.transform.smoothscale(image, new_size)
+
+
+def draw_introduction_overlay(
+    surf: pygame.Surface,
+    introduction: Dict[str, Any],
+    title_font: pygame.font.Font,
+    body_font: pygame.font.Font,
+    window_w: int,
+    window_h: int,
+) -> Optional[pygame.Rect]:
+    """Draw a modal introduction overlay; returns the continue button rect."""
+    if not introduction:
+        return None
+
+    dim = pygame.Surface((window_w, window_h), pygame.SRCALPHA)
+    dim.fill((0, 0, 0, 230))
+    surf.blit(dim, (0, 0))
+
+    panel_w = min(int(window_w * 0.82), 900)
+    panel_h = min(int(window_h * 0.82), 520)
+    panel_rect = pygame.Rect(0, 0, panel_w, panel_h)
+    panel_rect.center = (window_w // 2, window_h // 2)
+
+    pygame.draw.rect(surf, (0, 0, 0), panel_rect)
+    pygame.draw.rect(surf, (255, 255, 255), panel_rect, width=2)
+
+    padding = 22
+    cursor_y = panel_rect.y + padding
+    text_width = panel_rect.w - padding * 2
+
+    title = introduction.get("title")
+    if isinstance(title, str):
+        title_surface = title_font.render(title, True, (255, 255, 255))
+        title_rect = title_surface.get_rect()
+        title_rect.centerx = panel_rect.centerx
+        title_rect.top = cursor_y
+        surf.blit(title_surface, title_rect.topleft)
+        cursor_y += title_surface.get_height() + 12
+
+    desc = introduction.get("description")
+    desc_lines: list[str] = _wrap_text(desc, body_font, text_width) if isinstance(desc, str) else []
+    desc_line_gap = 4
+    desc_height = 0
+    if desc_lines:
+        desc_height = len(desc_lines) * body_font.get_height() + desc_line_gap * (len(desc_lines) - 1)
+
+    image = introduction.get("image")
+    if isinstance(image, pygame.Surface):
+        button_space = 70 + desc_height
+        available_h = panel_rect.bottom - padding - cursor_y - button_space
+        if available_h > 40:
+            scaled = _scale_image_to_fit(image, text_width, available_h)
+            image_rect = scaled.get_rect()
+            image_rect.centerx = panel_rect.centerx
+            image_rect.top = cursor_y
+            surf.blit(scaled, image_rect.topleft)
+            cursor_y += scaled.get_height() + 14
+
+    if desc_lines:
+        if isinstance(image, pygame.Surface):
+            cursor_y += 6
+        for line in desc_lines:
+            line_surface = body_font.render(line, True, (255, 255, 255))
+            line_rect = line_surface.get_rect()
+            line_rect.centerx = panel_rect.centerx
+            line_rect.top = cursor_y
+            surf.blit(line_surface, line_rect.topleft)
+            cursor_y += line_surface.get_height() + desc_line_gap
+        cursor_y += 8
+
+    button_text = introduction.get("button_text") or "Continue"
+    btn_w = max(180, title_font.size(button_text)[0] + 36)
+    btn_h = 46
+    button_rect = pygame.Rect(0, 0, btn_w, btn_h)
+    button_rect.centerx = panel_rect.centerx
+    button_rect.bottom = panel_rect.bottom - padding
+
+    pygame.draw.rect(surf, (0, 0, 0), button_rect)
+    pygame.draw.rect(surf, (255, 255, 255), button_rect, width=2)
+    btn_label = title_font.render(button_text, True, (255, 255, 255))
+    surf.blit(btn_label, btn_label.get_rect(center=button_rect.center))
+
+    return button_rect
+
+
 def draw_level_tiles(
     surf: pygame.Surface,
     level: Level,
@@ -278,7 +391,7 @@ def _build_label_surfaces(
     lines = _legend_label_lines(spec)
     if not lines:
         return []
-    text_color = spec.color if spec.color is not None else (235, 235, 245)
+    text_color = (255, 255, 255)
     return [label_font.render(line, True, text_color) for line in lines]
 
 
@@ -316,8 +429,9 @@ def _blit_label_box(
 ) -> None:
     """Draw the translucent label background and its text lines."""
     overlay = pygame.Surface((box_rect.w, box_rect.h), pygame.SRCALPHA)
-    overlay.fill((10, 12, 20, 210))
+    overlay.fill((0, 0, 0, 230))
     surf.blit(overlay, box_rect.topleft)
+    pygame.draw.rect(surf, (255, 255, 255), box_rect, width=1)
 
     cursor_y = box_rect.y + padding
     for surface in text_surfaces:
@@ -369,7 +483,7 @@ def draw_grid(
 
 def draw_hud(
     surf: pygame.Surface,
-    font: pygame.font.Font,
+    hud_font: pygame.font.Font,
     level_name: str,
     player_lives: int,
     player_score: int,
@@ -377,6 +491,12 @@ def draw_hud(
     color_mode: str,
 ) -> None:
     """Draw HUD text."""
+    # Match intro overlay style: monospace, high-contrast white on black.
+    bar_height = hud_font.get_height() + 12
+    bar = pygame.Surface((surf.get_width(), bar_height), pygame.SRCALPHA)
+    bar.fill((0, 0, 0, 230))
+    surf.blit(bar, (0, 0))
+
     if render_mode == "ascii":
         mode_label = "ASCII"
     elif render_mode == "gradient":
@@ -386,65 +506,105 @@ def draw_hud(
 
     color_label = "Gray" if color_mode == "gray" else "Multicolor"
     txt = (
-        f"Level: {level_name} | Score: {player_score} | Lives: {int(player_lives)} | Mode: {mode_label} | Color: {color_label} "
-        "| T: ASCII/Flat/Gradient | C: Multicolor/Gray | R: restart | ESC: quit"
+            f"{level_name} | Score: {player_score} | Lives: {int(player_lives)} | Mode (T): {mode_label} | Color (C): {color_label} "
+        "| R: restart | ESC: quit"
     )
-    surf.blit(font.render(txt, True, (220, 220, 235)), (12, 10))
+    surf.blit(hud_font.render(txt, True, (255, 255, 255)), (12, 6))
     if player_lives <= 0:
-        surf.blit(font.render("You died! Press R.", True, (255, 120, 120)), (12, 40))
+        surf.blit(hud_font.render("You died! Press R.", True, (255, 120, 120)), (12, bar_height + 4))
 
 
-def render_frame(
-    screen: pygame.Surface,
-    bg: Color,
-    level: Level,
-    legend: Dict[str, TileSpec],
-    player: Player,
-    camera: pygame.Vector2,
-    window_w: int,
-    window_h: int,
-    tile_size: int,
-    show_grid: bool,
-    grid_color: Color,
-    font: pygame.font.Font,
-    label_font: pygame.font.Font,
-    render_mode: str,
-    tile_font: pygame.font.Font,
-    color_mode: str,
-) -> None:
-    """Render and present a full frame."""
-    mode = render_mode if render_mode in ("ascii", "flat", "gradient") else "flat"
-    screen.fill(bg)
-    draw_level_tiles(
-        screen,
-        level,
-        legend,
-        camera,
-        window_w,
-        window_h,
-        tile_size,
-        mode,
-        tile_font,
-    )
-    draw_player(screen, player, camera, mode)
-    draw_grid(screen, show_grid, camera, window_w, window_h, tile_size, grid_color)
-    draw_tile_labels(
-        screen,
-        level,
-        legend,
-        camera,
-        window_w,
-        window_h,
-        tile_size,
-        label_font,
-    )
-    draw_hud(
-        screen,
-        font,
-        level.name,
-        player.cfg.upgrades["extra_live"],
-        player.score,
-        mode,
-        color_mode,
-    )
-    pygame.display.flip()
+class GameRenderer:
+    """Renderer that centralizes fonts and shared styling for overlays/HUD."""
+
+    def __init__(
+        self,
+        window_w: int,
+        window_h: int,
+        font: pygame.font.Font,
+        label_font: pygame.font.Font,
+        tile_font: pygame.font.Font,
+    ) -> None:
+        self.window_w = window_w
+        self.window_h = window_h
+        self.update_fonts(font, label_font, tile_font)
+
+    def update_fonts(
+        self,
+        font: pygame.font.Font,
+        label_font: pygame.font.Font,
+        tile_font: pygame.font.Font,
+    ) -> None:
+        """Refresh stored fonts and derived monospace variants."""
+        self.font = font
+        self.label_font = label_font
+        self.tile_font = tile_font
+        self.hud_font = pygame.font.SysFont("monospace", font.get_height())
+        self.label_overlay_font = pygame.font.SysFont("monospace", label_font.get_height())
+        title_size = max(font.get_height(), int(font.get_height() * 1.4))
+        body_size = max(label_font.get_height(), int(label_font.get_height() * 1.3))
+        self.intro_title_font = pygame.font.SysFont("monospace", title_size)
+        self.intro_body_font = pygame.font.SysFont("monospace", body_size)
+
+    def render_frame(
+        self,
+        screen: pygame.Surface,
+        bg: Color,
+        level: Level,
+        legend: Dict[str, TileSpec],
+        player: Player,
+        camera: pygame.Vector2,
+        tile_size: int,
+        show_grid: bool,
+        grid_color: Color,
+        render_mode: str,
+        color_mode: str,
+        introduction: Optional[Dict[str, Any]] = None,
+    ) -> Optional[pygame.Rect]:
+        """Render and present a full frame."""
+        mode = render_mode if render_mode in ("ascii", "flat", "gradient") else "flat"
+        screen.fill(bg)
+        draw_level_tiles(
+            screen,
+            level,
+            legend,
+            camera,
+            self.window_w,
+            self.window_h,
+            tile_size,
+            mode,
+            self.tile_font,
+        )
+        draw_player(screen, player, camera, mode)
+        draw_grid(screen, show_grid, camera, self.window_w, self.window_h, tile_size, grid_color)
+        draw_tile_labels(
+            screen,
+            level,
+            legend,
+            camera,
+            self.window_w,
+            self.window_h,
+            tile_size,
+            self.label_overlay_font,
+        )
+        draw_hud(
+            screen,
+            self.hud_font,
+            level.name,
+            player.cfg.upgrades["extra_live"],
+            player.score,
+            mode,
+            color_mode,
+        )
+        button_rect = None
+        if introduction:
+            button_rect = draw_introduction_overlay(
+                screen,
+                introduction,
+                self.intro_title_font,
+                self.intro_body_font,
+                self.window_w,
+                self.window_h,
+            )
+        pygame.display.flip()
+        return button_rect
