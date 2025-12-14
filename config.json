@@ -30,7 +30,10 @@
     "shape": "triangle",
     "orientation": "down",
     "ascii_char": "V",
-    "gravity": [0, 1700],
+    "gravity": [
+      0,
+      1700
+    ],
     "max_fall": 1000,
     "score": 1,
     "_max_x_tile_reached": 0,
@@ -48,7 +51,6 @@
       "steady-rap-beat-20231220-182861.mp3"
     ]
   },
-
   "upgrades": {
     "high_jump": {
       "max_level": 10,
@@ -219,7 +221,7 @@
       }
     },
     "1": {
-      "shape": "circle",
+      "shape": "triangle",
       "color": [
         60,
         220,
@@ -235,11 +237,11 @@
       }
     },
     "2": {
-      "shape": "circle",
+      "shape": "triangle",
       "color": [
-        60,
-        220,
-        120
+        255,
+        130,
+        60
       ],
       "solid": false,
       "consumable": true,
@@ -251,11 +253,11 @@
       }
     },
     "3": {
-      "shape": "circle",
+      "shape": "triangle",
       "color": [
-        60,
-        220,
-        120
+        70,
+        210,
+        255
       ],
       "solid": false,
       "consumable": true,
@@ -267,11 +269,11 @@
       }
     },
     "4": {
-      "shape": "circle",
+      "shape": "triangle",
       "color": [
-        60,
-        220,
-        120
+        190,
+        90,
+        255
       ],
       "solid": false,
       "consumable": true,
@@ -283,11 +285,11 @@
       }
     },
     "5": {
-      "shape": "circle",
+      "shape": "triangle",
       "color": [
-        60,
-        220,
-        120
+        255,
+        90,
+        170
       ],
       "solid": false,
       "consumable": true,
@@ -299,11 +301,11 @@
       }
     },
     "6": {
-      "shape": "circle",
+      "shape": "triangle",
       "color": [
-        60,
-        220,
-        120
+        170,
+        40,
+        60
       ],
       "solid": false,
       "consumable": true,
@@ -315,11 +317,11 @@
       }
     },
     "7": {
-      "shape": "circle",
+      "shape": "triangle",
       "color": [
-        60,
-        220,
-        120
+        90,
+        170,
+        255
       ],
       "solid": false,
       "consumable": true,
@@ -331,11 +333,11 @@
       }
     },
     "8": {
-      "shape": "circle",
+      "shape": "triangle",
       "color": [
-        60,
-        220,
-        120
+        140,
+        140,
+        155
       ],
       "solid": false,
       "consumable": true,
