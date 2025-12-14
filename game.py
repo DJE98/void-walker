@@ -23,8 +23,9 @@ class Game:
 
     def __init__(self, glob_cfg_path: Path) -> None:
         self.debug_consumption = True
-        self.base_cfg = load_json_config(glob_cfg_path)   # NEVER changes during a run
-        self.active_cfg = self.base_cfg                   # current merged level cfg
+        self.cfg_path = Path(glob_cfg_path)
+        self.base_cfg = load_json_config(self.cfg_path)
+        self.active_cfg = deep_merge({}, self.base_cfg)   # current merged level cfg
         self.levels_dir = Path(self.active_cfg.get("levels_dir", "levels"))
         self.current_level_name = str(self.active_cfg.get("currentLevel", "Level1"))
         self.pending_level_name: Optional[str] = None
@@ -98,6 +99,43 @@ class Game:
         self.font = pygame.font.Font(None, 28)
         self.label_font = pygame.font.Font(None, 22)
         self._update_tile_font()
+
+    def _restart_game(self) -> None:
+        """Fully restart the game state from disk config (master + start level)."""
+        self.base_cfg = load_json_config(self.cfg_path)
+        self.active_cfg = deep_merge({}, self.base_cfg)
+        self.levels_dir = Path(self.active_cfg.get("levels_dir", "levels"))
+        start_level = str(self.active_cfg.get("currentLevel", "Level1"))
+
+        resolved, merged_cfg, level_cfg_override = self._merged_level_config(start_level)
+        self.current_level_name = resolved
+        self.current_level_override = level_cfg_override
+        self.pending_level_name = None
+
+        self._apply_active_config(merged_cfg, is_initial=True)
+        self._init_ui()
+        self._apply_display_mode()
+        self._prepare_introduction_overlay()
+        self._init_music()
+        self.renderer = GameRenderer(
+            self.window_w, self.window_h, self.font, self.label_font, self.tile_font
+        )
+
+        self.upgrades_cfg = (
+            merged_cfg.get("upgrades", {}) if isinstance(merged_cfg.get("upgrades"), dict) else {}
+        )
+        self.scoring_cfg = (
+            merged_cfg.get("scoring", {}) if isinstance(merged_cfg.get("scoring"), dict) else {}
+        )
+        self.exploration_scoring_enabled = bool(self.scoring_cfg.get("exploration_points", False))
+        self.scoreboard = ScoreboardFile(
+            Path(merged_cfg.get("scoreboard_file", "scoreboard.txt"))
+        )
+
+        self.level = self._build_level_from_active_cfg()
+        self.player = self._create_player(self.level)
+        self.camera = pygame.Vector2(0, 0)
+        self._was_alive_last_frame = True
 
     def _merged_level_config(
         self, name: str
@@ -418,12 +456,6 @@ class Game:
     # Simulation
     # ----------------------------
 
-    def restart_level(self) -> None:
-        """Respawn the player at the current level's spawn."""
-        self.player.cfg.upgrades["extra_live"] = 1
-        self._was_alive_last_frame = True
-        self.player.respawn(self.level.spawn_px)
-
     def _is_player_below_death_line(self) -> bool:
         """Return True if the player has fallen far below the level."""
         death_y = self.level.height_tiles * self.tile_size + self.tile_size * 2
@@ -455,6 +487,8 @@ class Game:
                     timestamp=now_iso(), level=self.level.name, score=self.player.score
                 )
             )
+            self._restart_game()
+            return
         self._was_alive_last_frame = self.player.cfg.upgrades["extra_live"] > 0
 
         self.switch_level_if_needed()
@@ -545,7 +579,7 @@ class Game:
         if key == pygame.K_ESCAPE:
             return False
         if key == pygame.K_r:
-            self.restart_level()
+            self._restart_game()
         if key == pygame.K_t:
             self._toggle_render_mode()
         if key == pygame.K_c:
