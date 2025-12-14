@@ -39,7 +39,6 @@ class Level:
 class PlayerConfig:
     color: Color
     speed: float
-    jump_strength: float
     gravity: Tuple[float, float]
     max_fall: float
     upgrades: Dict[str, int]

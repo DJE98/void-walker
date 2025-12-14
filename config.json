@@ -27,7 +27,6 @@
       255
     ],
     "speed": 260,
-    "jump_strength": 560,
     "gravity": [0, 1700],
     "max_fall": 1000,
     "alive": true,
@@ -70,17 +69,17 @@
     "speed": {
       "max_level": 10,
       "bonuses": [
-        0,
-        200,
-        150,
-        110,
-        80,
-        60,
-        50,
-        40,
-        30,
-        20,
-        10
+        260,
+        300,
+        350,
+        399,
+        444,
+        480,
+        525,
+        545,
+        555,
+        565,
+        575
       ]
     },
     "double_jump": {
@@ -96,12 +95,13 @@
       "max_level": 1
     },
     "gliding": {
+      "description": "reduce the effect of gravity while falling from 0 to 100 percent of gravity",
       "max_level": 3,
       "gravity_reduction": [
         0,
-        500,
-        850,
-        1200
+        10,
+        20,
+        25
       ]
     },
     "extra_live": {
@@ -113,6 +113,7 @@
       ]
     },
     "fall_damage": {
+      "description": "amount of tiles the player can fall without reducing live",
       "max_level": 10,
       "threshold_tiles": [
         5,

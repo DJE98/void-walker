@@ -6,7 +6,6 @@
   "render": { "show_grid": true, "mode": "ascii", "color": "gray" },
   "player": {
     "color": [210, 230, 255],
-    "jump_strength": 600,
     "gravity": [120, 1550]
   },
   "music": {

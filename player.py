@@ -30,7 +30,6 @@ class Player:
         self.alive = True
         self.score: int = 0
         self.lives: int = 1  # default; optionally overridden by config later
-        self.upgrades: dict[str, Any] = {}  # populated from config["upgrades"]
         self.upgrades_cfg = upgradesCfg
         self._max_x_tile_reached: int = -1
         self._max_y_tile_reached: int = -1
@@ -73,6 +72,8 @@ class Player:
         - "upgrade" -> increment upgrade level (clamped)
         """
         for key, value in patch.items():
+            print(f"[upgrade-debug] got {key}->{value}")
+
             # Upgrade operations: {"high_jump": "upgrade"}
             if isinstance(value, str) and value.strip().lower() == "upgrade":
                 self._upgrade_one_level(key, upgrades_cfg)
@@ -91,7 +92,6 @@ class Player:
         if self.lives <= 0:
             self.alive = False
 
-
     def _apply_numeric_delta(self, key: str, delta: int) -> None:
         if key == "score":
             self.score = max(0, self.score + delta)
@@ -106,7 +106,6 @@ class Player:
             if isinstance(current, (int, float)):
                 setattr(self, key, current + delta)
 
-
     def _apply_direct_set(self, key: str, value: Any) -> None:
         # Keep your previous patch keys:
         if key == "alive":
@@ -117,8 +116,6 @@ class Player:
             self.lives = int(value)
         elif key == "speed":
             self.cfg.speed = float(value)
-        elif key == "jump_strength":
-            self.cfg.jump_strength = float(value)
         elif key == "gravity":
             self.cfg.gravity = self._parse_gravity_patch(value)
         elif key == "max_fall":
@@ -128,13 +125,16 @@ class Player:
             if hasattr(self, key):
                 setattr(self, key, value)
 
-
-    def _upgrade_one_level(self, upgrade_name: str, upgrades_cfg: dict[str, Any]) -> None:
+    def _upgrade_one_level(
+        self, upgrade_name: str, upgrades_cfg: dict[str, Any]
+    ) -> None:
         if upgrade_name not in upgrades_cfg:
+            print("[upgrade-debug] upgrade name not in config")
             return
         max_level = int(upgrades_cfg[upgrade_name].get("max_level", 0))
-        current = int(self.upgrades.get(upgrade_name, 0))
-        self.upgrades[upgrade_name] = min(max_level, current + 1)
+        current = int(self.cfg.upgrades.get(upgrade_name, 0))
+        self.cfg.upgrades[upgrade_name] = min(max_level, current + 1)
+        print(f"[upgrade-debug] upgrade {current + 1}/{max_level}")
 
     def _parse_gravity_patch(self, val: Any) -> tuple[float, float]:
         """Parse gravity patch supporting scalar, list/tuple, or dict."""
@@ -146,7 +146,9 @@ class Player:
             return float(gx), float(gy)
         return (self.cfg.gravity[0], float(val))
 
-    def update(self, dt: float, keys: pygame.key.ScancodeWrapper, solids: List[pygame.Rect]) -> None:
+    def update(
+        self, dt: float, keys: pygame.key.ScancodeWrapper, solids: List[pygame.Rect]
+    ) -> None:
         """Advance the player simulation by dt.
 
         Args:

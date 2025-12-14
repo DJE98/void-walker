@@ -270,26 +270,27 @@ class Game:
         current_char = self._get_level_char(tx, ty)
         legend_entry = self._legend_entry_for_char(current_char)
 
-        self._dbg(
-            f"TRIGGER HIT at (tx={tx}, ty={ty}) "
-            f"char='{current_char}' legend_keys={list(legend_entry.keys())}"
-        )
+        #self._dbg(
+        #    f"TRIGGER HIT at (tx={tx}, ty={ty}) "
+        #    f"char='{current_char}' legend_keys={list(legend_entry.keys())}"
+        #)
 
         # Apply the configured behavior (score/upgrades/etc.)
         self.apply_patch(trigger.spec.on_collision)
 
         # IMPORTANT: consumable info is in active_cfg legend, not in trigger.spec (usually)
         is_consumable = bool(legend_entry.get("consumable", False))
+        as_consumable = str(legend_entry.get("consumable_as", "."))
 
         if not is_consumable:
-            self._dbg(
-                f"not consumable: char='{current_char}' consumable={legend_entry.get('consumable')}"
-            )
+            #self._dbg(
+            #    f"not consumable: char='{current_char}' consumable={legend_entry.get('consumable')}"
+            #)
             return False
 
         # For now: always consume into '.' (as requested)
-        self._dbg(f"CONSUME: char='{current_char}' -> '.'")
-        self._set_level_char(tx, ty, ".")
+        #self._dbg(f"CONSUME: char='{current_char}' -> '{as_consumable}'")
+        self._set_level_char(tx, ty, as_consumable)
 
         return True
 
@@ -302,8 +303,8 @@ class Game:
             consumed = self._apply_trigger_if_colliding(t, pr)
             if not consumed:
                 remaining.append(t)
-            else:
-                self._dbg("trigger removed from active trigger list")
+            #else:
+            #    self._dbg("trigger removed from active trigger list")
 
         self.level.triggers = remaining
 
@@ -408,13 +409,13 @@ class Game:
 
     def _set_level_char(self, tx: int, ty: int, new_char: str) -> None:
         if ty < 0 or ty >= len(self.level.grid):
-            self._dbg(f"set_level_char ignored (out of bounds): tx={tx}, ty={ty}")
+            #self._dbg(f"set_level_char ignored (out of bounds): tx={tx}, ty={ty}")
             return
         row = self.level.grid[ty]
         if tx < 0 or tx >= len(row):
-            self._dbg(
-                f"set_level_char ignored (out of bounds): tx={tx}, ty={ty}, row_len={len(row)}"
-            )
+            #self._dbg(
+            #    f"set_level_char ignored (out of bounds): tx={tx}, ty={ty}, row_len={len(row)}"
+            #)
             return
 
         old_char = row[tx]
