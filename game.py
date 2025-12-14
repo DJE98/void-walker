@@ -108,6 +108,11 @@ class Game:
         level_cfg_path = find_level_config_path(self.levels_dir, resolved)
         if level_cfg_path:
             level_cfg_override = load_json_config(level_cfg_path)
+        
+        # IMPORTANT: exclude sections that should NOT participate in deep merge
+        self.active_cfg.pop("introduction", None)
+        self.active_cfg.pop("music", None)
+
         merged_cfg = deep_merge(self.active_cfg, level_cfg_override)
         return resolved, merged_cfg, level_cfg_override
 

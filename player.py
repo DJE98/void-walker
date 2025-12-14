@@ -22,7 +22,6 @@ class Player:
         upgradesCfg: UpgradesConfig,
     ) -> None:
         self.cfg = cfg
-        print(f"Player Conf: {cfg}")
         self._tile_size = tile_size
         self.size = pygame.Vector2(tile_size * 0.70, tile_size * 0.90)
         self.pos = pygame.Vector2(spawn_px.x, spawn_px.y)
