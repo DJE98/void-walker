@@ -6,7 +6,7 @@ from models import PlayerConfig, TileSpec, UpgradesConfig
 from utils import apply_color_mode, as_color
 
 
-def _parse_initial_upgrade_levels(raw: Any) -> Dict[str, int]:
+def _parse_upgrade_levels(raw: Any) -> Dict[str, int]:
     """
     Optional per-run starting levels (usually all 0).
     Allows config like:
@@ -58,7 +58,7 @@ def parse_player_config(raw: Dict[str, Any], color_mode: str = "multicolor") -> 
         color=color,
         gravity=_parse_gravity(raw.get("gravity")),
         max_fall=float(raw.get("max_fall", 1000)),
-        upgrades=_parse_initial_upgrade_levels(raw.get("upgrades", {})),
+        upgrades=_parse_upgrade_levels(raw.get("upgrades", {})),
     )
 
 

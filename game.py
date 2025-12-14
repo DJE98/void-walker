@@ -21,16 +21,13 @@ from game_types import Color
 class Game:
     """Top-level game orchestration (loading, loop, update, render)."""
 
-    def __init__(self, cfg_path: Path) -> None:
+    def __init__(self, glob_cfg_path: Path) -> None:
         self.debug_consumption = True
-        self.cfg_path = cfg_path
-        self.base_cfg = load_json_config(cfg_path)
-
-        self.levels_dir = Path(self.base_cfg.get("levels_dir", "levels"))
-
-        self.current_level_name = str(self.base_cfg.get("currentLevel", "Level1"))
+        self.base_cfg = load_json_config(glob_cfg_path)   # NEVER changes during a run
+        self.active_cfg = self.base_cfg                   # current merged level cfg
+        self.levels_dir = Path(self.active_cfg.get("levels_dir", "levels"))
+        self.current_level_name = str(self.active_cfg.get("currentLevel", "Level1"))
         self.pending_level_name: Optional[str] = None
-        self.active_cfg: Dict[str, Any] = {}
 
         resolved, merged_cfg, level_cfg_override = self._merged_level_config(
             self.current_level_name
@@ -108,10 +105,10 @@ class Game:
         """Return (resolved_name, merged_cfg, override_cfg) with level config overlaid on base config."""
         resolved = resolve_level_name(name, self.levels_dir)
         level_cfg_override: Dict[str, Any] = {}
-        cfg_path = find_level_config_path(self.levels_dir, resolved)
-        if cfg_path:
-            level_cfg_override = load_json_config(cfg_path)
-        merged_cfg = deep_merge(self.base_cfg, level_cfg_override)
+        level_cfg_path = find_level_config_path(self.levels_dir, resolved)
+        if level_cfg_path:
+            level_cfg_override = load_json_config(level_cfg_path)
+        merged_cfg = deep_merge(self.active_cfg, level_cfg_override)
         return resolved, merged_cfg, level_cfg_override
 
     def _apply_active_config(
@@ -252,8 +249,8 @@ class Game:
 
     def _init_music(self) -> None:
         """Initialize music controller and start playback."""
-        music_dir = Path(deep_get(self.base_cfg, "music.dir", "music"))
-        fade_ms = int(deep_get(self.base_cfg, "music.fade_ms", 800))
+        music_dir = Path(deep_get(self.active_cfg, "music.dir", "music"))
+        fade_ms = int(deep_get(self.active_cfg, "music.fade_ms", 800))
         bitcrusher_cfg = deep_get(self.active_cfg, "music.bitcrusher", None)
         self.music_controller = MusicController(music_dir, fade_ms, bitcrusher_cfg)
         self._update_music_playlist()
@@ -264,7 +261,7 @@ class Game:
         if isinstance(level_playlist, list) and len(level_playlist) > 0:
             return [str(track) for track in level_playlist if isinstance(track, str)]
 
-        global_playlist = deep_get(self.base_cfg, "music.playlist", [])
+        global_playlist = deep_get(self.active_cfg, "music.playlist", [])
         if isinstance(global_playlist, list):
             return [str(track) for track in global_playlist if isinstance(track, str)]
         return []
@@ -313,14 +310,34 @@ class Game:
         self.current_level_override = level_cfg_override
         self._apply_active_config(merged_cfg)
         self._prepare_introduction_overlay()
+        # refresh per-level upgrade/scoring definitions (static)
+        self.upgrades_cfg = merged_cfg.get("upgrades", {}) if isinstance(merged_cfg.get("upgrades"), dict) else {}
+        self.scoring_cfg = merged_cfg.get("scoring", {}) if isinstance(merged_cfg.get("scoring"), dict) else {}
+        self.exploration_scoring_enabled = bool(self.scoring_cfg.get("exploration_points", False))
         return self._build_level_from_active_cfg()
 
     def _switch_to_level(self, name: str) -> None:
-        """Switch to a level and respawn the player."""
+        """Switch to a level and respawn the player, keeping run-state (upgrades/score)."""
+        # --- capture run-state BEFORE player recreation ---
+        carried_upgrades = dict(self.player.cfg.upgrades)
+        carried_score = int(getattr(self.player, "score", 0))
+
+        # --- load new level ---
         self.level = self._load_level(name)
         self.player = self._create_player(self.level)
+
+        # --- restore run-state onto the new player instance ---
+        self.player.cfg.upgrades = carried_upgrades
+        self.player.score = carried_score
+
+        # music refresh
         self._update_music_settings()
         self._update_music_playlist()
+
+        # debug
+        if getattr(self, "debug_consumption", False):
+            print(f"[run-debug] switched to {name} | score={self.player.score} | upgrades={self.player.cfg.upgrades}")
+
 
     # ----------------------------
     # Patching / triggers
@@ -346,10 +363,10 @@ class Game:
         current_char = self._get_level_char(tx, ty)
         legend_entry = self._legend_entry_for_char(current_char)
 
-        #self._dbg(
+        # self._dbg(
         #    f"TRIGGER HIT at (tx={tx}, ty={ty}) "
         #    f"char='{current_char}' legend_keys={list(legend_entry.keys())}"
-        #)
+        # )
 
         # Apply the configured behavior (score/upgrades/etc.)
         self.apply_patch(trigger.spec.on_collision)
@@ -359,13 +376,13 @@ class Game:
         as_consumable = str(legend_entry.get("consumable_as", "."))
 
         if not is_consumable:
-            #self._dbg(
+            # self._dbg(
             #    f"not consumable: char='{current_char}' consumable={legend_entry.get('consumable')}"
-            #)
+            # )
             return False
 
         # For now: always consume into '.' (as requested)
-        #self._dbg(f"CONSUME: char='{current_char}' -> '{as_consumable}'")
+        # self._dbg(f"CONSUME: char='{current_char}' -> '{as_consumable}'")
         self._set_level_char(tx, ty, as_consumable)
 
         return True
@@ -379,7 +396,7 @@ class Game:
             consumed = self._apply_trigger_if_colliding(t, pr)
             if not consumed:
                 remaining.append(t)
-            #else:
+            # else:
             #    self._dbg("trigger removed from active trigger list")
 
         self.level.triggers = remaining
@@ -409,7 +426,10 @@ class Game:
 
     def _apply_fall_death(self) -> None:
         """Kill the player if they fell out of the world."""
-        if self.player.cfg.upgrades["extra_live"] > 0 and self._is_player_below_death_line():
+        if (
+            self.player.cfg.upgrades["extra_live"] > 0
+            and self._is_player_below_death_line()
+        ):
             self.player.cfg.upgrades["extra_live"] = 0
 
     def update(self, dt: float, keys: pygame.key.ScancodeWrapper) -> None:
@@ -421,7 +441,10 @@ class Game:
         self.handle_triggers()
         self._apply_fall_death()
 
-        if self._was_alive_last_frame and not self.player.cfg.upgrades["extra_live"] > 0:
+        if (
+            self._was_alive_last_frame
+            and not self.player.cfg.upgrades["extra_live"] > 0
+        ):
             self.scoreboard.append(
                 ScoreEntry(
                     timestamp=now_iso(), level=self.level.name, score=self.player.score
@@ -484,13 +507,13 @@ class Game:
 
     def _set_level_char(self, tx: int, ty: int, new_char: str) -> None:
         if ty < 0 or ty >= len(self.level.grid):
-            #self._dbg(f"set_level_char ignored (out of bounds): tx={tx}, ty={ty}")
+            # self._dbg(f"set_level_char ignored (out of bounds): tx={tx}, ty={ty}")
             return
         row = self.level.grid[ty]
         if tx < 0 or tx >= len(row):
-            #self._dbg(
+            # self._dbg(
             #    f"set_level_char ignored (out of bounds): tx={tx}, ty={ty}, row_len={len(row)}"
-            #)
+            # )
             return
 
         old_char = row[tx]
