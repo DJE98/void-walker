@@ -1,8 +1,8 @@
 {
-  "tile_size": 48,
+  "tile_size": 96,
   "window": {
-    "width": 1000,
-    "height": 600,
+    "width": 1920,
+    "height": 1080,
     "title": "Mistakes are permanent",
     "bg": [
       18,
@@ -13,7 +13,8 @@
       126,
       126,
       126
-    ]
+    ],
+    "fullscreen": false
   },
   "render": {
     "show_grid": false,
