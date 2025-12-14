@@ -163,7 +163,7 @@ class Player:
 
         self._update_horizontal_velocity(keys)
         self._try_jump(keys)
-        self._apply_gravity(dt)
+        self._apply_gravity(dt, keys)
 
         self._move_and_resolve_x(dt, solids)
         self._move_and_resolve_y(dt, solids)
@@ -198,10 +198,29 @@ class Player:
             self.vel.y = -effective_jump_strength
             self.on_ground = False
 
-    def _apply_gravity(self, dt: float) -> None:
-        """Apply gravity on both axes and clamp terminal velocity on Y."""
+    def _apply_gravity(self, dt: float, keys: pygame.key.ScancodeWrapper) -> None:
+        """Apply gravity and clamp terminal velocity on Y.
+        Gliding reduces gravity ONLY while moving along gravity direction (falling).
+        """
         gx, gy = self.cfg.gravity
+
+        # Horizontal gravity (kept as-is)
         self.vel.x += gx * dt
+
+        # Determine if we're "falling" = moving in the same direction as gravity
+        moving_with_gravity = (gy != 0.0) and ((self.vel.y * gy) > 0.0)
+
+        level = int(self.cfg.upgrades.get("gliding", 0))
+        level_score = self.upgrades_cfg.gliding.gravity_reduction
+        level = max(0, min(level, len(level_score) - 1)) 
+        glide_percent = max(0, min(level_score[level], 100))# 0..100
+
+        glide_held = bool(keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT])
+        glide_active = glide_held and glide_percent > 0 and moving_with_gravity
+        if glide_active:
+            # e.g. 30% => apply only 70% of gravity while falling
+            gy *= (1.0 - glide_percent / 100.0)
+
         self.vel.y += gy * dt
         self.vel.y = clamp_float(self.vel.y, -self.cfg.max_fall, self.cfg.max_fall)
 

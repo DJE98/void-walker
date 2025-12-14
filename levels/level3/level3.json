@@ -12,6 +12,22 @@
       "on_collision": {
         "currentLevel": "Level4"
       }
+    },
+    "U": {
+      "shape": "circle",
+      "color": [
+        60,
+        220,
+        120
+      ],
+      "solid": false,
+      "consumable": true,
+      "consumed_as": "D",
+      "on_collision": {
+        "player": {
+          "gliding": "upgrade"
+        }
+      }
     }
   }
 }
