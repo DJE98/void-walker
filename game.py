@@ -22,6 +22,7 @@ class Game:
     """Top-level game orchestration (loading, loop, update, render)."""
 
     def __init__(self, cfg_path: Path) -> None:
+        self.debug_consumption = True
         self.cfg_path = cfg_path
         self.base_cfg = load_json_config(cfg_path)
 
@@ -31,7 +32,9 @@ class Game:
         self.pending_level_name: Optional[str] = None
         self.active_cfg: Dict[str, Any] = {}
 
-        resolved, merged_cfg, level_cfg_override = self._merged_level_config(self.current_level_name)
+        resolved, merged_cfg, level_cfg_override = self._merged_level_config(
+            self.current_level_name
+        )
         self.current_level_name = resolved
         self.current_level_override = level_cfg_override
         self._apply_active_config(merged_cfg, is_initial=True)
@@ -83,7 +86,9 @@ class Game:
         self.font = pygame.font.Font(None, 28)
         self._update_tile_font()
 
-    def _merged_level_config(self, name: str) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
+    def _merged_level_config(
+        self, name: str
+    ) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
         """Return (resolved_name, merged_cfg, override_cfg) with level config overlaid on base config."""
         resolved = resolve_level_name(name, self.levels_dir)
         level_cfg_override: Dict[str, Any] = {}
@@ -154,9 +159,13 @@ class Game:
     def _refresh_colors(self) -> None:
         """Recompute colorized resources for the current color mode."""
         self.legend = parse_legend(self.active_cfg, self.color_mode)
-        base_bg = as_color(deep_get(self.active_cfg, "window.bg", [18, 20, 28]), (18, 20, 28))
+        base_bg = as_color(
+            deep_get(self.active_cfg, "window.bg", [18, 20, 28]), (18, 20, 28)
+        )
         self.bg = self._apply_color_mode(base_bg)
-        base_grid = as_color(deep_get(self.active_cfg, "window.grid", [126, 126, 126]), (126, 126, 126))
+        base_grid = as_color(
+            deep_get(self.active_cfg, "window.grid", [126, 126, 126]), (126, 126, 126)
+        )
         self.grid_color = self._apply_color_mode(base_grid)
 
         if hasattr(self, "player"):
@@ -212,7 +221,9 @@ class Game:
 
     def _create_player(self, level: Level) -> Player:
         """Create a player using config and level spawn."""
-        pconf = parse_player_config(self.active_cfg.get("player", {}), color_mode=self.color_mode)
+        pconf = parse_player_config(
+            self.active_cfg.get("player", {}), color_mode=self.color_mode
+        )
         uconf = parse_upgrade_config(self.active_cfg.get("upgrades", {}))
         return Player(pconf, level.spawn_px, self.tile_size, uconf)
 
@@ -248,16 +259,53 @@ class Game:
 
     def _apply_trigger_if_colliding(
         self, trigger: TriggerTile, player_rect: pygame.Rect
-    ) -> None:
-        """Apply trigger patch if the player collides with it."""
-        if player_rect.colliderect(trigger.rect):
-            self.apply_patch(trigger.spec.on_collision)
+    ) -> bool:
+        """Apply trigger patch if the player collides with it.
+        Returns True if the trigger was consumed and should be removed.
+        """
+        if not player_rect.colliderect(trigger.rect):
+            return False
+
+        tx, ty = self._tile_xy_from_world_rect(trigger.rect)
+        current_char = self._get_level_char(tx, ty)
+        legend_entry = self._legend_entry_for_char(current_char)
+
+        self._dbg(
+            f"TRIGGER HIT at (tx={tx}, ty={ty}) "
+            f"char='{current_char}' legend_keys={list(legend_entry.keys())}"
+        )
+
+        # Apply the configured behavior (score/upgrades/etc.)
+        self.apply_patch(trigger.spec.on_collision)
+
+        # IMPORTANT: consumable info is in active_cfg legend, not in trigger.spec (usually)
+        is_consumable = bool(legend_entry.get("consumable", False))
+
+        if not is_consumable:
+            self._dbg(
+                f"not consumable: char='{current_char}' consumable={legend_entry.get('consumable')}"
+            )
+            return False
+
+        # For now: always consume into '.' (as requested)
+        self._dbg(f"CONSUME: char='{current_char}' -> '.'")
+        self._set_level_char(tx, ty, ".")
+
+        return True
 
     def handle_triggers(self) -> None:
-        """Check all triggers in the level and apply any collisions."""
+        """Check all triggers in the level and apply any collisions. Consumed triggers are removed."""
         pr = self.player.rect
+
+        remaining: list[TriggerTile] = []
         for t in self.level.triggers:
-            self._apply_trigger_if_colliding(t, pr)
+            consumed = self._apply_trigger_if_colliding(t, pr)
+            if not consumed:
+                remaining.append(t)
+            else:
+                self._dbg("trigger removed from active trigger list")
+
+        self.level.triggers = remaining
 
     def switch_level_if_needed(self) -> None:
         """Switch to a pending level, if requested."""
@@ -315,6 +363,66 @@ class Game:
             window_h=self.window_h,
             tile_size=self.tile_size,
         )
+
+    def _set_level_tile_at_rect(self, tile_rect: pygame.Rect, new_char: str) -> None:
+        """Change the in-memory level grid character at tile_rect to new_char."""
+        tx = tile_rect.x // self.tile_size
+        ty = tile_rect.y // self.tile_size
+
+        if ty < 0 or ty >= len(self.level.grid):
+            return
+
+        row = self.level.grid[ty]
+        if tx < 0 or tx >= len(row):
+            return
+
+        self._dbg(f"set_level_char at tx={tx}, ty={ty}")
+        row_list = list(row)
+        row_list[tx] = new_char
+        self.level.grid[ty] = "".join(row_list)
+
+    def _dbg(self, msg: str) -> None:
+        # Toggle by setting self.debug_consumption = True somewhere (e.g. in __init__)
+        if getattr(self, "debug_consumption", False):
+            print(f"[consume-debug] {msg}")
+
+    def _legend_entry_for_char(self, ch: str) -> Dict[str, Any]:
+        legend = self.active_cfg.get("legend", {})
+        if not isinstance(legend, dict):
+            return {}
+        entry = legend.get(ch, {})
+        return entry if isinstance(entry, dict) else {}
+
+    def _tile_xy_from_world_rect(self, world_rect: pygame.Rect) -> tuple[int, int]:
+        tx = int(world_rect.x // self.tile_size)
+        ty = int(world_rect.y // self.tile_size)
+        return tx, ty
+
+    def _get_level_char(self, tx: int, ty: int) -> str:
+        if ty < 0 or ty >= len(self.level.grid):
+            return "."
+        row = self.level.grid[ty]
+        if tx < 0 or tx >= len(row):
+            return "."
+        return row[tx]
+
+    def _set_level_char(self, tx: int, ty: int, new_char: str) -> None:
+        if ty < 0 or ty >= len(self.level.grid):
+            self._dbg(f"set_level_char ignored (out of bounds): tx={tx}, ty={ty}")
+            return
+        row = self.level.grid[ty]
+        if tx < 0 or tx >= len(row):
+            self._dbg(
+                f"set_level_char ignored (out of bounds): tx={tx}, ty={ty}, row_len={len(row)}"
+            )
+            return
+
+        old_char = row[tx]
+        row_list = list(row)
+        row_list[tx] = new_char
+        self.level.grid[ty] = "".join(row_list)
+
+        self._dbg(f"tile changed at (tx={tx}, ty={ty}): '{old_char}' -> '{new_char}'")
 
     # ----------------------------
     # Events / loop
