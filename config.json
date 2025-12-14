@@ -32,7 +32,6 @@
     "_max_x_tile_reached": 0,
     "_max_y_tile_reached": 0,
     "upgrades": {
-      "high_jump": 0,
       "extra_live": 1
     }
   },
