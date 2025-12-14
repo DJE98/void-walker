@@ -1,11 +1,25 @@
 {
-  "render": { "mode": "gradient", "color": "multicolor" },
+  "render": {
+    "mode": "gradient",
+    "color": "multicolor"
+  },
   "music": {
-    "playlist": ["steady-rap-beat-20231220-182861.mp3"],
-    "bitcrusher": { "bits": 16, "sample_rate": 18000 }
+    "playlist": [
+      "steady-rap-beat-20231220-182861.mp3"
+    ],
+    "bitcrusher": {
+      "bits": 16,
+      "sample_rate": 18000
+    }
   },
   "legend": {
-    "S": { "color": [70, 200, 110] },
+    "S": {
+      "color": [
+        70,
+        200,
+        110
+      ]
+    },
     "G": {
       "shape": "circle",
       "color": [

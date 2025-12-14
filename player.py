@@ -22,17 +22,17 @@ class Player:
         upgradesCfg: UpgradesConfig,
     ) -> None:
         self.cfg = cfg
+        print(f"Player Conf: {cfg}")
         self._tile_size = tile_size
         self.size = pygame.Vector2(tile_size * 0.70, tile_size * 0.90)
         self.pos = pygame.Vector2(spawn_px.x, spawn_px.y)
         self.vel = pygame.Vector2(0, 0)
         self.on_ground = False
         self.score: int = 0
-        self.upgrades_cfg = upgradesCfg
         self._max_x_tile_reached: int = -1
         self._max_y_tile_reached: int = -1
-
         self._rect = pygame.Rect(0, 0, int(self.size.x), int(self.size.y))
+        self.upgrades_cfg = upgradesCfg
 
     @property
     def rect(self) -> pygame.Rect:
