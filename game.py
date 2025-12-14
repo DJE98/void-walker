@@ -213,7 +213,8 @@ class Game:
     def _create_player(self, level: Level) -> Player:
         """Create a player using config and level spawn."""
         pconf = parse_player_config(self.active_cfg.get("player", {}), color_mode=self.color_mode)
-        return Player(pconf, level.spawn_px, self.tile_size)
+        uconf = parse_upgrade_config(self.active_cfg.get("upgrades", {}))
+        return Player(pconf, level.spawn_px, self.tile_size, uconf)
 
     # ----------------------------
     # Level management
@@ -241,7 +242,7 @@ class Game:
     def apply_patch(self, patch: Dict[str, Any]) -> None:
         """Apply a patch dict to the game and/or player."""
         if "player" in patch and isinstance(patch["player"], dict):
-            self.player.apply_patch(patch["player"], upgrades=self.upgrades_cfg)
+            self.player.apply_patch(patch["player"], upgrades_cfg=self.upgrades_cfg)
         if "currentLevel" in patch:
             self.pending_level_name = str(patch["currentLevel"])
 

@@ -65,22 +65,76 @@ class Player:
         self.on_ground = False
         self.alive = True
 
-    def apply_patch(self, patch: Dict[str, Any]) -> None:
-        """Apply a config patch onto the player.
-
-        Args:
-            patch: Dict with keys like alive, speed, jump_strength, gravity, max_fall.
+    def apply_patch(self, patch: Dict[str, Any], upgrades_cfg: dict[str, Any]) -> None:
         """
-        if "alive" in patch:
-            self.alive = bool(patch["alive"])
-        if "speed" in patch:
-            self.cfg.speed = float(patch["speed"])
-        if "jump_strength" in patch:
-            self.cfg.jump_strength = float(patch["jump_strength"])
-        if "gravity" in patch:
-            self.cfg.gravity = self._parse_gravity_patch(patch["gravity"])
-        if "max_fall" in patch:
-            self.cfg.max_fall = float(patch["max_fall"])
+        New semantics:
+        - numeric/bool values -> set (backwards compatible)
+        - "up/down/up100/down25" -> add/subtract on numeric fields
+        - "upgrade" -> increment upgrade level (clamped)
+        """
+        for key, value in patch.items():
+            # Upgrade operations: {"high_jump": "upgrade"}
+            if isinstance(value, str) and value.strip().lower() == "upgrade":
+                self._upgrade_one_level(key, upgrades_cfg)
+                continue
+
+            # Numeric ops: {"score": "up100"}, {"lives": "down"}
+            delta = parse_numeric_op(value)
+            if delta is not None:
+                self._apply_numeric_delta(key, delta)
+                continue
+
+            # Fallback: old behavior (direct set)
+            self._apply_direct_set(key, value)
+
+        # Optional rule: if lives <= 0 => dead
+        if self.lives <= 0:
+            self.alive = False
+
+
+    def _apply_numeric_delta(self, key: str, delta: int) -> None:
+        if key == "score":
+            self.score = max(0, self.score + delta)
+            return
+        if key == "lives":
+            self.lives = self.lives + delta
+            return
+
+        # allow future numeric fields to be delta-updated if they exist
+        if hasattr(self, key):
+            current = getattr(self, key)
+            if isinstance(current, (int, float)):
+                setattr(self, key, current + delta)
+
+
+    def _apply_direct_set(self, key: str, value: Any) -> None:
+        # Keep your previous patch keys:
+        if key == "alive":
+            self.alive = bool(value)
+        elif key == "score":
+            self.score = int(value)
+        elif key == "lives":
+            self.lives = int(value)
+        elif key == "speed":
+            self.cfg.speed = float(value)
+        elif key == "jump_strength":
+            self.cfg.jump_strength = float(value)
+        elif key == "gravity":
+            self.cfg.gravity = self._parse_gravity_patch(value)
+        elif key == "max_fall":
+            self.cfg.max_fall = float(value)
+        else:
+            # keep old optional physics tuning via patches if you had it
+            if hasattr(self, key):
+                setattr(self, key, value)
+
+
+    def _upgrade_one_level(self, upgrade_name: str, upgrades_cfg: dict[str, Any]) -> None:
+        if upgrade_name not in upgrades_cfg:
+            return
+        max_level = int(upgrades_cfg[upgrade_name].get("max_level", 0))
+        current = int(self.upgrades.get(upgrade_name, 0))
+        self.upgrades[upgrade_name] = min(max_level, current + 1)
 
     def _parse_gravity_patch(self, val: Any) -> tuple[float, float]:
         """Parse gravity patch supporting scalar, list/tuple, or dict."""
