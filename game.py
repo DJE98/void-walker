@@ -76,9 +76,18 @@ class Game:
     def _init_pygame(self) -> None:
         """Initialize pygame and create window + clock."""
         pygame.init()
-        self.screen = pygame.display.set_mode((self.window_w, self.window_h))
-        pygame.display.set_caption(self.title)
+        self._apply_display_mode()
         self.clock = pygame.time.Clock()
+
+    def _apply_display_mode(self) -> None:
+        """Create or recreate the display surface with the current mode."""
+        flags = pygame.FULLSCREEN if getattr(self, "fullscreen", False) else 0
+        self.screen = pygame.display.set_mode((self.window_w, self.window_h), flags)
+        # Capture the actual size in case the platform adjusted it.
+        self.window_w, self.window_h = self.screen.get_size()
+        if hasattr(self, "renderer"):
+            self.renderer.update_window_size(self.window_w, self.window_h)
+        pygame.display.set_caption(self.title)
 
     def _update_tile_font(self) -> None:
         """Create/update the font used for ASCII tile rendering."""
@@ -117,7 +126,11 @@ class Game:
         if is_initial:
             self.window_w = int(deep_get(cfg, "window.width", 1000))
             self.window_h = int(deep_get(cfg, "window.height", 600))
+            self.windowed_size = (self.window_w, self.window_h)
             self.title = str(deep_get(cfg, "window.title", "ASCII Side-Scroller"))
+        fullscreen_cfg = bool(deep_get(cfg, "window.fullscreen", False))
+        if is_initial or not hasattr(self, "fullscreen"):
+            self.fullscreen = fullscreen_cfg
 
         self.bg = as_color(deep_get(cfg, "window.bg", [18, 20, 28]), (18, 20, 28))
         self.grid_color = as_color(
@@ -509,6 +522,8 @@ class Game:
             self._toggle_render_mode()
         if key == pygame.K_c:
             self._toggle_color_mode()
+        if key in (pygame.K_F11, pygame.K_f):
+            self._toggle_fullscreen()
         return True
 
     def _toggle_render_mode(self) -> None:
@@ -525,6 +540,21 @@ class Game:
         """Toggle render color mode between multicolor and gray."""
         self.color_mode = "gray" if self.color_mode == "multicolor" else "multicolor"
         self._refresh_colors()
+
+    def _toggle_fullscreen(self) -> None:
+        """Toggle between windowed and fullscreen display modes."""
+        self.fullscreen = not getattr(self, "fullscreen", False)
+        if self.fullscreen:
+            # Remember the last windowed size so we can restore it.
+            self.windowed_size = (self.window_w, self.window_h)
+            info = pygame.display.Info()
+            self.window_w = info.current_w
+            self.window_h = info.current_h
+        else:
+            self.window_w, self.window_h = getattr(
+                self, "windowed_size", (self.window_w, self.window_h)
+            )
+        self._apply_display_mode()
 
     def _handle_events(self) -> bool:
         """Process pygame events.

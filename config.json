@@ -13,7 +13,8 @@
       126,
       126,
       126
-    ]
+    ],
+    "fullscreen": false
   },
   "render": {
     "show_grid": false,

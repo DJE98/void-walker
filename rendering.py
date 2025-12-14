@@ -507,7 +507,7 @@ def draw_hud(
     color_label = "Gray" if color_mode == "gray" else "Multicolor"
     txt = (
             f"{level_name} | Score: {player_score} | Lives: {int(player_lives)} | Mode (T): {mode_label} | Color (C): {color_label} "
-        "| R: restart | ESC: quit"
+        "| R: restart | F11: fullscreen | ESC: quit"
     )
     surf.blit(hud_font.render(txt, True, (255, 255, 255)), (12, 6))
     if player_lives <= 0:
@@ -528,6 +528,11 @@ class GameRenderer:
         self.window_w = window_w
         self.window_h = window_h
         self.update_fonts(font, label_font, tile_font)
+
+    def update_window_size(self, window_w: int, window_h: int) -> None:
+        """Update cached window dimensions used for drawing."""
+        self.window_w = window_w
+        self.window_h = window_h
 
     def update_fonts(
         self,
