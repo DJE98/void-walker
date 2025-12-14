@@ -16,6 +16,8 @@ class TileSpec:
     color: Optional[Color]  # None if shape == none
     solid: bool
     on_collision: Dict[str, Any]
+    title: Optional[str] = None
+    description: Optional[str] = None
 
 
 @dataclass

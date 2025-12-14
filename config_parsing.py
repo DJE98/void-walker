@@ -94,17 +94,35 @@ def parse_legend(cfg: Dict[str, Any], color_mode: str = "multicolor") -> Dict[st
         base_color = None if shape == "none" else as_color(raw.get("color"), (200, 60, 220))
         color = apply_color_mode(base_color, color_mode) if base_color is not None else None
 
+        title_raw = raw.get("title")
+        title = str(title_raw).strip() if isinstance(title_raw, str) else None
+
+        desc_raw = raw.get("description")
+        description = str(desc_raw).strip() if isinstance(desc_raw, str) else None
+
         on_col = raw.get("on_collision", {})
         if not isinstance(on_col, dict):
             on_col = {}
 
         legend[ch] = TileSpec(
-            char=ch, shape=shape, color=color, solid=solid, on_collision=on_col
+            char=ch,
+            shape=shape,
+            color=color,
+            solid=solid,
+            on_collision=on_col,
+            title=title,
+            description=description,
         )
 
     if "." not in legend:
         legend["."] = TileSpec(
-            char=".", shape="none", color=None, solid=False, on_collision={}
+            char=".",
+            shape="none",
+            color=None,
+            solid=False,
+            on_collision={},
+            title=None,
+            description=None,
         )
 
     return legend

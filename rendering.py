@@ -188,6 +188,113 @@ def draw_level_tiles(
         draw_tile(surf, spec, world_rect, camera, tile_size, render_mode, tile_font)
 
 
+def draw_tile_labels(
+    surf: pygame.Surface,
+    level: Level,
+    legend: Dict[str, TileSpec],
+    camera: pygame.Vector2,
+    window_w: int,
+    window_h: int,
+    tile_size: int,
+    label_font: pygame.font.Font,
+) -> None:
+    """Draw title/description overlays above tiles when provided by the legend."""
+    ts = tile_size
+    padding = 6
+    line_gap = 2
+    default_spec = legend.get(
+        ".",
+        TileSpec(
+            char=".",
+            shape="none",
+            color=None,
+            solid=False,
+            on_collision={},
+            title=None,
+            description=None,
+        ),
+    )
+
+    for x, y, ch in iter_visible_tiles(level, camera, window_w, window_h, tile_size):
+        spec = legend.get(ch, default_spec)
+        text_surfaces = _build_label_surfaces(spec, label_font)
+        if not text_surfaces:
+            continue
+
+        world_rect = pygame.Rect(x * ts, y * ts, ts, ts)
+        screen_rect = world_to_screen(world_rect, camera)
+        box_rect = _label_box_rect(
+            screen_rect, text_surfaces, window_w, window_h, padding, line_gap
+        )
+
+        _blit_label_box(surf, text_surfaces, box_rect, padding, line_gap)
+
+
+def _legend_label_lines(spec: TileSpec) -> list[str]:
+    """Return cleaned title/description lines for a legend entry."""
+    lines: list[str] = []
+    for raw in (getattr(spec, "title", None), getattr(spec, "description", None)):
+        if isinstance(raw, str):
+            txt = raw.strip()
+            if txt:
+                lines.append(txt)
+    return lines
+
+
+def _build_label_surfaces(
+    spec: TileSpec, label_font: pygame.font.Font
+) -> list[pygame.Surface]:
+    """Render label lines into surfaces; returns empty list when no label exists."""
+    lines = _legend_label_lines(spec)
+    if not lines:
+        return []
+    text_color = spec.color if spec.color is not None else (235, 235, 245)
+    return [label_font.render(line, True, text_color) for line in lines]
+
+
+def _label_box_rect(
+    screen_rect: pygame.Rect,
+    text_surfaces: list[pygame.Surface],
+    window_w: int,
+    window_h: int,
+    padding: int,
+    line_gap: int,
+) -> pygame.Rect:
+    """Compute a clamped label box rectangle above the tile's screen rect."""
+    max_w = max(surface.get_width() for surface in text_surfaces)
+    total_h = sum(surface.get_height() for surface in text_surfaces)
+    total_h += line_gap * (len(text_surfaces) - 1)
+
+    box_w = max_w + padding * 2
+    box_h = total_h + padding * 2
+    box_rect = pygame.Rect(0, 0, box_w, box_h)
+    box_rect.centerx = screen_rect.centerx
+    box_rect.bottom = screen_rect.top - 4
+
+    # Clamp label to stay within the visible window.
+    box_rect.x = max(4, min(box_rect.x, window_w - box_rect.w - 4))
+    box_rect.y = max(4, min(box_rect.y, window_h - box_rect.h - 4))
+    return box_rect
+
+
+def _blit_label_box(
+    surf: pygame.Surface,
+    text_surfaces: list[pygame.Surface],
+    box_rect: pygame.Rect,
+    padding: int,
+    line_gap: int,
+) -> None:
+    """Draw the translucent label background and its text lines."""
+    overlay = pygame.Surface((box_rect.w, box_rect.h), pygame.SRCALPHA)
+    overlay.fill((10, 12, 20, 210))
+    surf.blit(overlay, box_rect.topleft)
+
+    cursor_y = box_rect.y + padding
+    for surface in text_surfaces:
+        surf.blit(surface, (box_rect.x + padding, cursor_y))
+        cursor_y += surface.get_height() + line_gap
+
+
 def draw_player(
     surf: pygame.Surface, player: Player, camera: pygame.Vector2, render_mode: str
 ) -> None:
@@ -270,6 +377,7 @@ def render_frame(
     show_grid: bool,
     grid_color: Color,
     font: pygame.font.Font,
+    label_font: pygame.font.Font,
     render_mode: str,
     tile_font: pygame.font.Font,
     color_mode: str,
@@ -290,5 +398,15 @@ def render_frame(
     )
     draw_player(screen, player, camera, mode)
     draw_grid(screen, show_grid, camera, window_w, window_h, tile_size, grid_color)
+    draw_tile_labels(
+        screen,
+        level,
+        legend,
+        camera,
+        window_w,
+        window_h,
+        tile_size,
+        label_font,
+    )
     draw_hud(screen, font, level.name, player.alive, player.score, mode, color_mode)
     pygame.display.flip()

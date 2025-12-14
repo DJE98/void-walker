@@ -84,6 +84,7 @@ class Game:
     def _init_ui(self) -> None:
         """Initialize UI resources."""
         self.font = pygame.font.Font(None, 28)
+        self.label_font = pygame.font.Font(None, 22)
         self._update_tile_font()
 
     def _merged_level_config(
@@ -501,6 +502,7 @@ class Game:
                 show_grid=self.show_grid,
                 grid_color=self.grid_color,
                 font=self.font,
+                label_font=self.label_font,
                 render_mode=self.render_mode,
                 tile_font=self.tile_font,
                 color_mode=self.color_mode,
