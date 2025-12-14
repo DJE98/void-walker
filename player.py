@@ -92,6 +92,9 @@ class Player:
         if key == "score":
             self.score = max(0, self.score + delta)
             return
+        if key == "gravity":
+            self.gravity = delta
+            return
 
         # allow future numeric fields to be delta-updated if they exist
         if hasattr(self, key):

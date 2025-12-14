@@ -1,0 +1,62 @@
+{
+    ".": {
+        "solid": false,
+        "collision": "none"
+    },
+    "#": {
+        "solid": true,
+        "collision": "none"
+    },
+    "=": {
+        "solid": true,
+        "collision": "none"
+    },
+    "S": {
+        "solid": false,
+        "collision": "spawn"
+    },
+    "G": {
+        "solid": false,
+        "level": "nextLevel"
+    },
+    "^": {
+        "solid": false,
+        "extra_live": "down"
+    },
+    "*": {
+        "solid": false,
+        "score": "up100"
+    },
+    "1": {
+        "solid": false,
+        "speed": "up"
+    },
+    "2": {
+        "solid": false,
+        "speed": "down"
+    },
+    "3": {
+        "solid": false,
+        "high_jump": "up"
+    },
+    "4": {
+        "solid": false,
+        "high_jump": "down"
+    },
+    "5": {
+        "solid": false,
+        "extra_live": "up"
+    },
+    "6": {
+        "solid": false,
+        "extra_live": "down"
+    },
+    "7": {
+        "solid": false,
+        "gliding": "up"
+    },
+    "8": {
+        "solid": false,
+        "gliding": "down"
+    }
+}

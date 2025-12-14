@@ -199,31 +199,6 @@
         }
       }
     },
-    "U": {
-      "shape": "circle",
-      "color": [
-        60,
-        220,
-        120
-      ],
-      "solid": false,
-      "consumable": true,
-      "consumed_as": "D",
-      "on_collision": {
-        "player": {
-          "speed": "upgrade"
-        }
-      }
-    },
-    "D": {
-      "shape": "circle",
-      "color": [
-        100,
-        110,
-        105
-      ],
-      "solid": false
-    },
     "*": {
       "shape": "triangle",
       "color": [
@@ -240,25 +215,133 @@
         }
       }
     },
-    "d": {
-      "shape": "triangle",
+    "1": {
+      "shape": "circle",
       "color": [
-        120,
-        120,
+        60,
+        220,
         120
       ],
-      "solid": false
+      "solid": false,
+      "consumable": true,
+      "consumed_as": "D",
+      "on_collision": {
+        "player": {
+          "speed": "upgrade"
+        }
+      }
     },
-    "B": {
-      "shape": "rect",
+    "2": {
+      "shape": "circle",
       "color": [
-        150,
-        120,
-        90
+        60,
+        220,
+        120
       ],
-      "solid": true,
-      "destructible": true,
-      "destroyed_as": "."
+      "solid": false,
+      "consumable": true,
+      "consumed_as": "D",
+      "on_collision": {
+        "player": {
+          "speed": "downgrade"
+        }
+      }
+    },
+    "3": {
+      "shape": "circle",
+      "color": [
+        60,
+        220,
+        120
+      ],
+      "solid": false,
+      "consumable": true,
+      "consumed_as": "D",
+      "on_collision": {
+        "player": {
+          "high_jump": "upgrade"
+        }
+      }
+    },
+    "4": {
+      "shape": "circle",
+      "color": [
+        60,
+        220,
+        120
+      ],
+      "solid": false,
+      "consumable": true,
+      "consumed_as": "D",
+      "on_collision": {
+        "player": {
+          "high_jump": "downgrade"
+        }
+      }
+    },
+    "5": {
+      "shape": "circle",
+      "color": [
+        60,
+        220,
+        120
+      ],
+      "solid": false,
+      "consumable": true,
+      "consumed_as": "D",
+      "on_collision": {
+        "player": {
+          "extra_live": "upgrade"
+        }
+      }
+    },
+    "6": {
+      "shape": "circle",
+      "color": [
+        60,
+        220,
+        120
+      ],
+      "solid": false,
+      "consumable": true,
+      "consumed_as": "D",
+      "on_collision": {
+        "player": {
+          "extra_live": "downgrade"
+        }
+      }
+    },
+    "7": {
+      "shape": "circle",
+      "color": [
+        60,
+        220,
+        120
+      ],
+      "solid": false,
+      "consumable": true,
+      "consumed_as": "D",
+      "on_collision": {
+        "player": {
+          "gliding": "upgrade"
+        }
+      }
+    },
+    "8": {
+      "shape": "circle",
+      "color": [
+        60,
+        220,
+        120
+      ],
+      "solid": false,
+      "consumable": true,
+      "consumed_as": "D",
+      "on_collision": {
+        "player": {
+          "gliding": "downgrade"
+        }
+      }
     }
   },
   "levels": {}
