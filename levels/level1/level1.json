@@ -8,26 +8,19 @@
     "image": "assets/logo.png",
     "button_text": "Continue"
   },
-  "player": {
-    "color": [210, 230, 255],
-    "gravity": [120, 1550]
-  },
   "music": {
     "playlist": ["cool-hiphop-rap-beat-20230307-191928.mp3"],
     "bitcrusher": { "bits": 8, "sample_rate": 8000 }
   },
   "currentLevel": "Level1",
   "legend": {
+    "*": {
+      "title": "Stars",
+      "description": "Collect Points"
+    },
     "G": {
-      "shape": "circle",
-      "color": [
-        255,
-        214,
-        90
-      ],
       "title": "Goal",
       "description": "Brings you to the next level",
-      "solid": false,
       "on_collision": {
         "currentLevel": "Level2"
       }

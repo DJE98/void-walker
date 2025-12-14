@@ -30,7 +30,7 @@
     "shape": "triangle",
     "orientation": "down",
     "ascii_char": "V",
-    "gravity": [0, 1700],
+    "gravity": [0, 500],
     "max_fall": 1000,
     "score": 1,
     "_max_x_tile_reached": 0,
@@ -51,9 +51,9 @@
 
   "upgrades": {
     "high_jump": {
-      "max_level": 10,
+      "max_level": 9,
       "level": [
-        560,
+	500,
         1000,
         1350,
         1550,

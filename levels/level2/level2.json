@@ -1,6 +1,6 @@
 {
   "render": {
-    "mode": "gradient",
+    "mode": "ASCII",
     "color": "multicolor"
   },
   "music": {
@@ -8,8 +8,8 @@
       "steady-rap-beat-20231220-182861.mp3"
     ],
     "bitcrusher": {
-      "bits": 16,
-      "sample_rate": 18000
+      "bits": 8,
+      "sample_rate": 10000
     }
   },
   "legend": {
