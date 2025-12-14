@@ -54,8 +54,18 @@ def parse_player_config(raw: Dict[str, Any], color_mode: str = "multicolor") -> 
     """
     color = as_color(raw.get("color", [235, 240, 255]), (235, 240, 255))
     color = apply_color_mode(color, color_mode)
+    shape = str(raw.get("shape", "rect")).lower()
+    if shape not in ("rect", "circle", "triangle"):
+        shape = "rect"
+    ascii_char_raw = raw.get("ascii_char", "@")
+    ascii_char = "@" if ascii_char_raw is None else str(ascii_char_raw)
+    ascii_char = ascii_char.strip() or "@"
+    # Ensure a single glyph for ASCII mode.
+    ascii_char = ascii_char[0]
     return PlayerConfig(
         color=color,
+        shape=shape,
+        ascii_char=ascii_char,
         gravity=_parse_gravity(raw.get("gravity")),
         max_fall=float(raw.get("max_fall", 1000)),
         upgrades=_parse_upgrade_levels(raw.get("upgrades", {})),

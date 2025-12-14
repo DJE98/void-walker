@@ -40,6 +40,8 @@ class Level:
 @dataclass
 class PlayerConfig:
     color: Color
+    shape: str  # rect|circle|triangle
+    ascii_char: str
     gravity: Tuple[float, float]
     max_fall: float
     upgrades: Dict[str, int]

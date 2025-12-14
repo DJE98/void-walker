@@ -439,15 +439,57 @@ def _blit_label_box(
         cursor_y += surface.get_height() + line_gap
 
 
+def _draw_player_ascii(
+    surf: pygame.Surface,
+    rect: pygame.Rect,
+    tile_font: pygame.font.Font,
+    ascii_char: str,
+    color: Color,
+) -> None:
+    """Render the player using a monospace glyph centered in its rect."""
+    txt_surface = tile_font.render(ascii_char, True, color)
+    surf.blit(txt_surface, txt_surface.get_rect(center=rect.center))
+
+
+def _draw_player_shape(
+    surf: pygame.Surface,
+    rect: pygame.Rect,
+    render_mode: str,
+    shape: str,
+    color: Color,
+    tile_size: int,
+) -> None:
+    """Render the player using the configured shape."""
+    shape = shape if shape in ("rect", "circle", "triangle") else "rect"
+    if render_mode == "gradient":
+        spec = TileSpec(char="@", shape=shape, color=color, solid=False, on_collision={})
+        _draw_gradient_shape(surf, spec, rect, tile_size)
+    else:
+        spec = TileSpec(char="@", shape=shape, color=color, solid=False, on_collision={})
+        _draw_flat_shape(surf, spec, rect, tile_size)
+
+
 def draw_player(
-    surf: pygame.Surface, player: Player, camera: pygame.Vector2, render_mode: str
+    surf: pygame.Surface,
+    player: Player,
+    camera: pygame.Vector2,
+    render_mode: str,
+    tile_font: pygame.font.Font,
+    tile_size: int,
 ) -> None:
     """Draw the player."""
     rect = world_to_screen(player.rect, camera)
-    if render_mode == "gradient":
-        _draw_gradient_rect(surf, rect, player.cfg.color, border_radius=8)
-    else:
-        pygame.draw.rect(surf, player.cfg.color, rect, border_radius=8)
+    if render_mode == "ascii":
+        _draw_player_ascii(surf, rect, tile_font, player.cfg.ascii_char, player.cfg.color)
+        return
+    _draw_player_shape(
+        surf,
+        rect,
+        render_mode,
+        player.cfg.shape,
+        player.cfg.color,
+        tile_size,
+    )
 
 
 def draw_grid(
@@ -580,7 +622,7 @@ class GameRenderer:
             mode,
             self.tile_font,
         )
-        draw_player(screen, player, camera, mode)
+        draw_player(screen, player, camera, mode, self.tile_font, tile_size)
         draw_grid(screen, show_grid, camera, self.window_w, self.window_h, tile_size, grid_color)
         draw_tile_labels(
             screen,

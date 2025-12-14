@@ -75,6 +75,9 @@ Retro‑futuristic, hostile, playful in presentation, ruthless in consequence. T
   - `mode`: `"ascii" | "flat" | "gradient"` (per-level override supported); runtime toggle via `T`
   - `color`: `"multicolor" | "gray"` (per-level override supported); runtime toggle via `C`
 - `player`: default movement/physics (speed, jump_strength, gravity, max_fall)
+  - `color`: base tint (honors render color mode)
+  - `shape`: `"rect" | "circle" | "triangle"`
+  - `ascii_char`: single-character glyph used in ASCII render mode
 - `currentLevel`: starting level name
 - `legend`: tile definitions (the “rules engine”)
 - `music`:
