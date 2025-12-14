@@ -56,7 +56,6 @@ def parse_player_config(raw: Dict[str, Any], color_mode: str = "multicolor") -> 
     color = apply_color_mode(color, color_mode)
     return PlayerConfig(
         color=color,
-        speed=float(raw.get("speed", 260)),
         gravity=_parse_gravity(raw.get("gravity")),
         max_fall=float(raw.get("max_fall", 1000)),
         upgrades=_parse_initial_upgrade_levels(raw.get("upgrades", {})),

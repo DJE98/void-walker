@@ -26,7 +26,6 @@
       240,
       255
     ],
-    "speed": 260,
     "gravity": [0, 1700],
     "max_fall": 1000,
     "alive": true,
@@ -214,7 +213,7 @@
       "consumed_as": "D",
       "on_collision": {
         "player": {
-          "high_jump": "upgrade"
+          "speed": "upgrade"
         }
       }
     },

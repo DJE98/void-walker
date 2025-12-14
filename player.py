@@ -114,8 +114,6 @@ class Player:
             self.score = int(value)
         elif key == "lives":
             self.lives = int(value)
-        elif key == "speed":
-            self.cfg.speed = float(value)
         elif key == "gravity":
             self.cfg.gravity = self._parse_gravity_patch(value)
         elif key == "max_fall":
@@ -174,7 +172,13 @@ class Player:
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             move_dir += 1.0
         if move_dir != 0.0:
-            self.vel.x = move_dir * self.cfg.speed
+            level = int(self.cfg.upgrades.get("speed", 0))
+            level_score = self.upgrades_cfg.high_jump.level
+            level = max(0, min(level, len(level_score) - 1))
+            print(f"speed level {level} / {level_score[level]}")
+            effective_speed = float(level_score[level])
+            self.vel.x = move_dir * effective_speed
+
         elif self.cfg.gravity[0] == 0.0:
             self.vel.x = 0.0
 

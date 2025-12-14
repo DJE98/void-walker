@@ -9,6 +9,22 @@
   },
   "legend": {
     "S": { "color": [70, 200, 110] },
-    "^": { "on_collision": { "player": { "alive": true } } }
+    "^": { "on_collision": { "player": { "alive": true } } },
+    "U": {
+      "shape": "circle",
+      "color": [
+        60,
+        220,
+        120
+      ],
+      "solid": false,
+      "consumable": true,
+      "consumed_as": "D",
+      "on_collision": {
+        "player": {
+          "high_jump": "upgrade"
+        }
+      }
+    }
   }
 }

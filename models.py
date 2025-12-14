@@ -40,7 +40,6 @@ class Level:
 @dataclass
 class PlayerConfig:
     color: Color
-    speed: float
     gravity: Tuple[float, float]
     max_fall: float
     upgrades: Dict[str, int]
