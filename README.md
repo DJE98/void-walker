@@ -88,6 +88,7 @@ Each tile character maps to:
 - `shape`: `"none" | "rect" | "circle" | "triangle"`
 - `color`: `[r,g,b]` (optional if `shape="none"`)
 - `solid`: `true/false`
+- `title` / `description` (optional): when present, a small overlay is rendered above the tile to explain what it does
 - `on_collision`: optional patch applied when player overlaps the tile
 
 Patch targets supported by the engine

@@ -22,6 +22,8 @@
         214,
         90
       ],
+      "title": "Goal",
+      "description": "Brings you to the next level",
       "solid": false,
       "on_collision": {
         "currentLevel": "Level2"
