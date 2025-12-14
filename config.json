@@ -28,14 +28,12 @@
     ],
     "gravity": [0, 1700],
     "max_fall": 1000,
-    "alive": true,
     "score": 1,
-    "lives": 1,
-    "starting_lives": 1,
     "_max_x_tile_reached": 0,
     "_max_y_tile_reached": 0,
     "upgrades": {
-      "high_jump": 0
+      "high_jump": 0,
+      "extra_live": 1
     }
   },
   "music": {
@@ -194,10 +192,10 @@
         80,
         95
       ],
-      "solid": true,
+      "solid": false,
       "on_collision": {
         "player": {
-          "lives": "down"
+          "extra_live": "downgrade"
         }
       }
     },

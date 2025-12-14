@@ -323,10 +323,9 @@ class Game:
 
     def restart_level(self) -> None:
         """Respawn the player at the current level's spawn."""
-        self.player.respawn(self.level.spawn_px)
-        # starting_lives = int(deep_get(merged_cfg, "player.lives", 1))
-        # self.player.start_new_run(self.upgrades_cfg, starting_lives=starting_lives)
+        self.player.cfg.upgrades["extra_live"] = 1
         self._was_alive_last_frame = True
+        self.player.respawn(self.level.spawn_px)
 
     def _is_player_below_death_line(self) -> bool:
         """Return True if the player has fallen far below the level."""
@@ -335,8 +334,8 @@ class Game:
 
     def _apply_fall_death(self) -> None:
         """Kill the player if they fell out of the world."""
-        if self.player.alive and self._is_player_below_death_line():
-            self.player.alive = False
+        if self.player.cfg.upgrades["extra_live"] > 0 and self._is_player_below_death_line():
+            self.player.cfg.upgrades["extra_live"] = 0
 
     def update(self, dt: float, keys: pygame.key.ScancodeWrapper) -> None:
         """Update one simulation step."""
@@ -347,13 +346,13 @@ class Game:
         self.handle_triggers()
         self._apply_fall_death()
 
-        if self._was_alive_last_frame and not self.player.alive:
+        if self._was_alive_last_frame and not self.player.cfg.upgrades["extra_live"] > 0:
             self.scoreboard.append(
                 ScoreEntry(
                     timestamp=now_iso(), level=self.level.name, score=self.player.score
                 )
             )
-        self._was_alive_last_frame = self.player.alive
+        self._was_alive_last_frame = self.player.cfg.upgrades["extra_live"] > 0
 
         self.switch_level_if_needed()
         self._update_music()

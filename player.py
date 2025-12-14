@@ -27,9 +27,7 @@ class Player:
         self.pos = pygame.Vector2(spawn_px.x, spawn_px.y)
         self.vel = pygame.Vector2(0, 0)
         self.on_ground = False
-        self.alive = True
         self.score: int = 0
-        self.lives: int = 1  # default; optionally overridden by config later
         self.upgrades_cfg = upgradesCfg
         self._max_x_tile_reached: int = -1
         self._max_y_tile_reached: int = -1
@@ -54,7 +52,6 @@ class Player:
         self.pos.update(spawn_px.x, spawn_px.y)
         self.vel.update(0, 0)
         self.on_ground = False
-        self.alive = True
         self.score = 0
 
     def respawn(self, spawn_px: pygame.Vector2) -> None:
@@ -62,7 +59,6 @@ class Player:
         self.pos.update(spawn_px.x, spawn_px.y)
         self.vel.update(0, 0)
         self.on_ground = False
-        self.alive = True
 
     def apply_patch(self, patch: Dict[str, Any], upgrades_cfg: dict[str, Any]) -> None:
         """
@@ -72,14 +68,19 @@ class Player:
         - "upgrade" -> increment upgrade level (clamped)
         """
         for key, value in patch.items():
-            print(f"[upgrade-debug] got {key}->{value}")
+            print(f"[patch-debug] got {key} -> {value}")
 
             # Upgrade operations: {"high_jump": "upgrade"}
             if isinstance(value, str) and value.strip().lower() == "upgrade":
                 self._upgrade_one_level(key, upgrades_cfg)
                 continue
 
-            # Numeric ops: {"score": "up100"}, {"lives": "down"}
+            # Upgrade operations: {"extra_live": "downgrade"}
+            if isinstance(value, str) and value.strip().lower() == "downgrade":
+                self._downgrade_one_level(key, upgrades_cfg)
+                continue
+
+            # Numeric ops: {"score": "up100"}, {"extra_live": "down"}
             delta = parse_numeric_op(value)
             if delta is not None:
                 self._apply_numeric_delta(key, delta)
@@ -88,16 +89,9 @@ class Player:
             # Fallback: old behavior (direct set)
             self._apply_direct_set(key, value)
 
-        # Optional rule: if lives <= 0 => dead
-        if self.lives <= 0:
-            self.alive = False
-
     def _apply_numeric_delta(self, key: str, delta: int) -> None:
         if key == "score":
             self.score = max(0, self.score + delta)
-            return
-        if key == "lives":
-            self.lives = self.lives + delta
             return
 
         # allow future numeric fields to be delta-updated if they exist
@@ -108,12 +102,8 @@ class Player:
 
     def _apply_direct_set(self, key: str, value: Any) -> None:
         # Keep your previous patch keys:
-        if key == "alive":
-            self.alive = bool(value)
-        elif key == "score":
+        if key == "score":
             self.score = int(value)
-        elif key == "lives":
-            self.lives = int(value)
         elif key == "gravity":
             self.cfg.gravity = self._parse_gravity_patch(value)
         elif key == "max_fall":
@@ -132,7 +122,20 @@ class Player:
         max_level = int(upgrades_cfg[upgrade_name].get("max_level", 0))
         current = int(self.cfg.upgrades.get(upgrade_name, 0))
         self.cfg.upgrades[upgrade_name] = min(max_level, current + 1)
-        print(f"[upgrade-debug] upgrade {current + 1}/{max_level}")
+        print(f"[upgrade-debug] upgrade {upgrade_name} to {min(max_level, current + 1)}")
+
+    def _downgrade_one_level(
+        self, upgrade_name: str, upgrades_cfg: dict[str, Any]
+    ) -> None:
+        if upgrade_name not in upgrades_cfg:
+            print("[downgrade-debug] downgrade name not in config")
+            return
+        current = int(self.cfg.upgrades.get(upgrade_name, 0))
+        self.cfg.upgrades[upgrade_name] = max(0, current - 1)
+        print(f"[downgrade-debug] downgrade {upgrade_name} to {max(0, current - 1)}")
+        # push back on hurt
+        if upgrade_name == "extra_live":
+            self.vel.x = self.vel.x * -1.0
 
     def _parse_gravity_patch(self, val: Any) -> tuple[float, float]:
         """Parse gravity patch supporting scalar, list/tuple, or dict."""
@@ -154,7 +157,8 @@ class Player:
             keys: Current keyboard state.
             solids: Solid tile rects in world coordinates.
         """
-        if not self.alive:
+        if self.cfg.upgrades["extra_live"] <= 0:
+            print(f"player died with {self.cfg.upgrades['extra_live']} lives")
             return
 
         self._update_horizontal_velocity(keys)
@@ -175,7 +179,7 @@ class Player:
             level = int(self.cfg.upgrades.get("speed", 0))
             level_score = self.upgrades_cfg.high_jump.level
             level = max(0, min(level, len(level_score) - 1))
-            print(f"speed level {level} / {level_score[level]}")
+            # print(f"speed level {level} / {level_score[level]}")
             effective_speed = float(level_score[level])
             self.vel.x = move_dir * effective_speed
 
@@ -230,7 +234,7 @@ class Player:
     def update_exploration_score(
         self, tile_size: int = 48, enabled: bool = True
     ) -> None:
-        if not enabled or not self.alive:
+        if not enabled or self.cfg.upgrades["extra_live"] <= 0:
             return
 
         x_tile = int(self.rect.centerx // tile_size)

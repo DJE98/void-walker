@@ -102,14 +102,18 @@ def _draw_shape_with_color(
     pygame.draw.rect(surf, color, r)
 
 
-def _draw_flat_shape(surf: pygame.Surface, spec: TileSpec, r: pygame.Rect, tile_size: int) -> None:
+def _draw_flat_shape(
+    surf: pygame.Surface, spec: TileSpec, r: pygame.Rect, tile_size: int
+) -> None:
     """Draw a tile using flat colors (non-gradient)."""
     if spec.color is None:
         return
     _draw_shape_with_color(surf, spec, r, tile_size, spec.color)
 
 
-def _vertical_gradient_surface(size: Tuple[int, int], top: Color, bottom: Color) -> pygame.Surface:
+def _vertical_gradient_surface(
+    size: Tuple[int, int], top: Color, bottom: Color
+) -> pygame.Surface:
     """Create a vertical gradient surface from top to bottom."""
     w, h = size
     grad = pygame.Surface((w, h), pygame.SRCALPHA)
@@ -128,7 +132,9 @@ def _vertical_gradient_surface(size: Tuple[int, int], top: Color, bottom: Color)
     return grad
 
 
-def _draw_gradient_shape(surf: pygame.Surface, spec: TileSpec, r: pygame.Rect, tile_size: int) -> None:
+def _draw_gradient_shape(
+    surf: pygame.Surface, spec: TileSpec, r: pygame.Rect, tile_size: int
+) -> None:
     """Draw a tile using a smooth vertical gradient derived from its base color."""
     base = spec.color
     if base is None:
@@ -137,8 +143,16 @@ def _draw_gradient_shape(surf: pygame.Surface, spec: TileSpec, r: pygame.Rect, t
     def clamp(v: int) -> int:
         return max(0, min(255, v))
 
-    top = (clamp(int(base[0] * 1.05)), clamp(int(base[1] * 1.05)), clamp(int(base[2] * 1.05)))
-    bottom = (clamp(int(base[0] * 0.55)), clamp(int(base[1] * 0.55)), clamp(int(base[2] * 0.55)))
+    top = (
+        clamp(int(base[0] * 1.05)),
+        clamp(int(base[1] * 1.05)),
+        clamp(int(base[2] * 1.05)),
+    )
+    bottom = (
+        clamp(int(base[0] * 0.55)),
+        clamp(int(base[1] * 0.55)),
+        clamp(int(base[2] * 0.55)),
+    )
 
     grad = _vertical_gradient_surface((r.w, r.h), top, bottom)
 
@@ -147,7 +161,9 @@ def _draw_gradient_shape(surf: pygame.Surface, spec: TileSpec, r: pygame.Rect, t
         return
 
     mask = pygame.Surface((r.w, r.h), pygame.SRCALPHA)
-    _draw_shape_with_color(mask, spec, pygame.Rect(0, 0, r.w, r.h), tile_size, (255, 255, 255))
+    _draw_shape_with_color(
+        mask, spec, pygame.Rect(0, 0, r.w, r.h), tile_size, (255, 255, 255)
+    )
     grad.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
     surf.blit(grad, r.topleft)
 
@@ -156,15 +172,29 @@ def _draw_gradient_rect(
     surf: pygame.Surface, rect: pygame.Rect, color: Color, border_radius: int = 0
 ) -> None:
     """Draw a rounded rect with a smooth vertical gradient derived from base color."""
+
     def clamp(v: int) -> int:
         return max(0, min(255, v))
 
-    top = (clamp(int(color[0] * 1.05)), clamp(int(color[1] * 1.05)), clamp(int(color[2] * 1.05)))
-    bottom = (clamp(int(color[0] * 0.55)), clamp(int(color[1] * 0.55)), clamp(int(color[2] * 0.55)))
+    top = (
+        clamp(int(color[0] * 1.05)),
+        clamp(int(color[1] * 1.05)),
+        clamp(int(color[2] * 1.05)),
+    )
+    bottom = (
+        clamp(int(color[0] * 0.55)),
+        clamp(int(color[1] * 0.55)),
+        clamp(int(color[2] * 0.55)),
+    )
 
     grad = _vertical_gradient_surface((rect.w, rect.h), top, bottom)
     mask = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
-    pygame.draw.rect(mask, (255, 255, 255), pygame.Rect(0, 0, rect.w, rect.h), border_radius=border_radius)
+    pygame.draw.rect(
+        mask,
+        (255, 255, 255),
+        pygame.Rect(0, 0, rect.w, rect.h),
+        border_radius=border_radius,
+    )
     grad.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
     surf.blit(grad, rect.topleft)
 
@@ -341,7 +371,7 @@ def draw_hud(
     surf: pygame.Surface,
     font: pygame.font.Font,
     level_name: str,
-    player_alive: bool,
+    player_lives: int,
     player_score: int,
     render_mode: str,
     color_mode: str,
@@ -356,11 +386,11 @@ def draw_hud(
 
     color_label = "Gray" if color_mode == "gray" else "Multicolor"
     txt = (
-        f"Level: {level_name} | Score: {player_score} | Alive: {player_alive} | Mode: {mode_label} | Color: {color_label} "
+        f"Level: {level_name} | Score: {player_score} | Lives: {int(player_lives)} | Mode: {mode_label} | Color: {color_label} "
         "| T: ASCII/Flat/Gradient | C: Multicolor/Gray | R: restart | ESC: quit"
     )
     surf.blit(font.render(txt, True, (220, 220, 235)), (12, 10))
-    if not player_alive:
+    if player_lives <= 0:
         surf.blit(font.render("You died! Press R.", True, (255, 120, 120)), (12, 40))
 
 
@@ -408,5 +438,13 @@ def render_frame(
         tile_size,
         label_font,
     )
-    draw_hud(screen, font, level.name, player.alive, player.score, mode, color_mode)
+    draw_hud(
+        screen,
+        font,
+        level.name,
+        player.cfg.upgrades["extra_live"],
+        player.score,
+        mode,
+        color_mode,
+    )
     pygame.display.flip()

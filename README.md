@@ -48,10 +48,10 @@ Retro‑futuristic, hostile, playful in presentation, ruthless in consequence. T
 - Gravity accelerates the player downward.
 - Fall speed is clamped by `max_fall`.
 - Death happens when:
-  - a hazard trigger sets `player.alive=false`, or
+  - a hazard trigger sets players lives down, or
   - the player falls far below the map bounds.
 - **Fall damage**: if the player falls more tiles than allowed → lose a life (or die if no lives remain).
-- **Lives**: with `extra_live`, damage reduces lives and pushes the player back instead of instant death.
+- **Lives**: with `extra_live`, damage reduces lives (and pushes the player back) instead of instant death.
 
 ## Levels
 ### Level Format (current implementation)
@@ -92,7 +92,7 @@ Each tile character maps to:
 - `on_collision`: optional patch applied when player overlaps the tile
 
 Patch targets supported by the engine
-- `{"player": {...}}` — modifies player state/properties (e.g. `alive`)
+- `{"player": {...}}` — modifies player state/properties
 - `{"currentLevel": "Level2"}` — requests a level switch
 
 Example:
@@ -169,7 +169,7 @@ Example:
   "shape": "triangle",
   "color": [230, 80, 95],
   "solid": false,
-  "on_collision": { "player": { "alive": false } }
+  "on_collision": { "player": { "extra_live": 0 } }
 }
 ```
 
