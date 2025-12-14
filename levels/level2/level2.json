@@ -21,13 +21,6 @@
       ]
     },
     "G": {
-      "shape": "circle",
-      "color": [
-        255,
-        214,
-        90
-      ],
-      "solid": false,
       "on_collision": {
         "currentLevel": "Level3"
       }

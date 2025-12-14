@@ -8,11 +8,11 @@
       "sample_rate": 8000
     }
   },
-  "currentLevel": "Level3",
+  "currentLevel": "Level8",
   "legend": {
     "G": {
       "on_collision": {
-        "currentLevel": "Level4"
+        "currentLevel": "Level9"
       }
     }
   }

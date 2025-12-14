@@ -1,16 +1,18 @@
 {
+  "music": {
+    "playlist": [
+      "cool-hiphop-rap-beat-20230307-191928.mp3"
+    ],
+    "bitcrusher": {
+      "bits": 8,
+      "sample_rate": 8000
+    }
+  },
   "currentLevel": "Level6",
   "legend": {
     "G": {
-      "shape": "circle",
-      "color": [
-        255,
-        214,
-        90
-      ],
-      "solid": false,
       "on_collision": {
-        "currentLevel": "Level6"
+        "currentLevel": "Level7"
       }
     }
   }
