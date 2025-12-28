@@ -4,7 +4,8 @@
   "window": {
     "width": 1920,
     "height": 1080,
-    "title": "Mistakes are permanent",
+    "title": "Void Walker",
+    "icon": "assets/icon.png",
     "bg": [
       18,
       20,

@@ -34,6 +34,9 @@ class Game:
         self.levels_dir = Path(self.active_cfg.get("levels_dir", "levels"))
         self.current_level_name = str(self.active_cfg.get("currentLevel", "Level1"))
         self.pending_level_name: Optional[str] = None
+        self.window_icon_path: Optional[Path] = None
+        self._window_icon_surface: Optional[pygame.Surface] = None
+        self._window_icon_loaded_from: Optional[Path] = None
 
         resolved, merged_cfg, level_cfg_override = self._merged_level_config(
             self.current_level_name
@@ -100,6 +103,61 @@ class Game:
         self._apply_display_mode()
         self.clock = pygame.time.Clock()
 
+    def _update_window_icon_path(self, cfg: Dict[str, Any]) -> None:
+        """Store the configured window icon path and reset cache if it changed."""
+        raw_icon = deep_get(cfg, "window.icon", None)
+        icon_path = None
+        if isinstance(raw_icon, str):
+            icon_str = raw_icon.strip()
+            if icon_str:
+                icon_path = Path(icon_str)
+
+        if icon_path != self.window_icon_path:
+            self.window_icon_path = icon_path
+            self._window_icon_surface = None
+            self._window_icon_loaded_from = None
+
+    def _window_icon_candidates(self) -> List[Path]:
+        """Return candidate paths for the configured window icon."""
+        if not self.window_icon_path:
+            return []
+
+        raw_path = self.window_icon_path
+        if raw_path.is_absolute():
+            return [raw_path]
+
+        cfg_dir = self.cfg_path.parent
+        return [cfg_dir / raw_path]
+
+    def _load_window_icon_surface(self) -> Optional[pygame.Surface]:
+        """Load the configured window icon image if available."""
+        for candidate in self._window_icon_candidates():
+            if not candidate.exists():
+                continue
+            try:
+                surface = pygame.image.load(candidate.as_posix()).convert_alpha()
+                self._window_icon_surface = surface
+                self._window_icon_loaded_from = candidate
+                return surface
+            except pygame.error:
+                logger.warning("Failed to load window icon from %s", candidate)
+                return None
+
+        if self.window_icon_path:
+            logger.warning("Window icon configured but not found: %s", self.window_icon_path)
+        return None
+
+    def _apply_window_icon(self) -> None:
+        """Apply the configured window icon if present."""
+        if not self.window_icon_path:
+            return
+
+        if self._window_icon_surface is None:
+            self._load_window_icon_surface()
+
+        if self._window_icon_surface is not None:
+            pygame.display.set_icon(self._window_icon_surface)
+
     def _apply_display_mode(self) -> None:
         """Create or recreate the display surface with the current mode."""
         flags = pygame.FULLSCREEN if getattr(self, "fullscreen", False) else 0
@@ -109,6 +167,7 @@ class Game:
         if hasattr(self, "renderer"):
             self.renderer.update_window_size(self.window_w, self.window_h)
         pygame.display.set_caption(self.title)
+        self._apply_window_icon()
 
     def _update_tile_font(self) -> None:
         """Create/update the font used for ASCII tile rendering."""
@@ -191,6 +250,7 @@ class Game:
         self.tile_size = int(cfg.get("tile_size", 48))
         self.color_mode = self._parse_color_mode(cfg)
         self._apply_render_mode(cfg)
+        self._update_window_icon_path(cfg)
 
         if is_initial:
             self.window_w = int(deep_get(cfg, "window.width", 1000))
@@ -209,6 +269,8 @@ class Game:
         self._refresh_colors()
         if hasattr(self, "tile_font"):
             self._update_tile_font()
+        if hasattr(self, "screen"):
+            self._apply_window_icon()
 
     def _prepare_introduction_overlay(self) -> None:
         """Load introduction overlay content for the active level."""

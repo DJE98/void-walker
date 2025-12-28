@@ -14,6 +14,7 @@
 - **Window**
   - `window.width` / `window.height`: initial windowed resolution (ignored when fullscreen launches).
   - `window.title`: title bar text.
+  - `window.icon`: optional image path for the window icon.
   - `window.bg`: background color `[r,g,b]`.
   - `window.grid`: grid line color `[r,g,b]` when enabled.
   - `window.fullscreen`: `true/false` to start in fullscreen; runtime toggle via `F11` or `F`.
