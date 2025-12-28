@@ -169,10 +169,10 @@ class Player:
 
         self._update_horizontal_velocity(keys)
         self._try_jump(keys)
-        self._apply_gravity(dt, keys)
+        dx, dy = self._apply_gravity(dt, keys)
 
-        self._move_and_resolve_x(dt, solids)
-        self._move_and_resolve_y(dt, solids)
+        self._move_and_resolve_x(dx, solids)
+        self._move_and_resolve_y(dy, solids)
 
     def _update_horizontal_velocity(self, keys: pygame.key.ScancodeWrapper) -> None:
         """Update horizontal velocity from input while keeping gravity influence."""
@@ -204,17 +204,19 @@ class Player:
             self.vel.y = -effective_jump_strength
             self.on_ground = False
 
-    def _apply_gravity(self, dt: float, keys: pygame.key.ScancodeWrapper) -> None:
-        """Apply gravity and clamp terminal velocity on Y.
+    def _apply_gravity(self, dt: float, keys: pygame.key.ScancodeWrapper) -> tuple[float, float]:
+        """Apply gravity and clamp terminal velocity.
         Gliding reduces gravity ONLY while moving along gravity direction (falling).
+        Returns the displacement (dx, dy) computed with y(t)=v0*t - 0.5*g*t^2 style kinematics.
         """
-        gx, gy = self.cfg.gravity
+        gravity_x, gravity_y = self.cfg.gravity
 
-        # Horizontal gravity (kept as-is)
-        self.vel.x += gx * dt
+        # Cache velocities before acceleration for displacement calculation.
+        initial_vx = self.vel.x
+        initial_vy = self.vel.y
 
         # Determine if we're "falling" = moving in the same direction as gravity
-        moving_with_gravity = (gy != 0.0) and ((self.vel.y * gy) > 0.0)
+        moving_with_gravity = (gravity_y != 0.0) and ((initial_vy * gravity_y) > 0.0)
 
         level = int(self.cfg.upgrades.get("gliding", 0))
         level_score = self.upgrades_cfg.gliding.gravity_reduction
@@ -225,13 +227,20 @@ class Player:
         glide_active = glide_held and glide_percent > 0 and moving_with_gravity
         if glide_active:
             # e.g. 30% => apply only 70% of gravity while falling
-            gy *= (1.0 - glide_percent / 100.0)
+            gravity_y *= (1.0 - glide_percent / 100.0)
 
-        self.vel.y += gy * dt
-        self.vel.y = clamp_float(self.vel.y, -self.cfg.max_fall, self.cfg.max_fall)
+        # Use kinematic displacement: y(t) = v0*t + 0.5*a*t^2 (sign of g handled by gy).
+        dx = initial_vx * dt + 0.5 * gravity_x * dt * dt
+        dy = initial_vy * dt + 0.5 * gravity_y * dt * dt
 
-    def _move_and_resolve_x(self, dt: float, solids: List[pygame.Rect]) -> None:
-        self.pos.x += self.vel.x * dt
+        self.vel.x = initial_vx + gravity_x * dt
+        self.vel.y = clamp_float(
+            initial_vy + gravity_y * dt, -self.cfg.max_fall, self.cfg.max_fall
+        )
+        return dx, dy
+
+    def _move_and_resolve_x(self, dx: float, solids: List[pygame.Rect]) -> None:
+        self.pos.x += dx
         r = self.rect
         for s in solids:
             if r.colliderect(s):
@@ -241,8 +250,8 @@ class Player:
                     r.left = s.right
                 self.pos.x = float(r.x)
 
-    def _move_and_resolve_y(self, dt: float, solids: List[pygame.Rect]) -> None:
-        self.pos.y += self.vel.y * dt
+    def _move_and_resolve_y(self, dy: float, solids: List[pygame.Rect]) -> None:
+        self.pos.y += dy
         r = self.rect
 
         self.on_ground = False
