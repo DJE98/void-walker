@@ -146,12 +146,16 @@ class Game:
         level_cfg_path = find_level_config_path(self.levels_dir, resolved)
         if level_cfg_path:
             level_cfg_override = load_json_config(level_cfg_path)
-        
-        # IMPORTANT: exclude sections that should NOT participate in deep merge
-        self.active_cfg.pop("introduction", None)
-        self.active_cfg.pop("music", None)
 
-        merged_cfg = deep_merge(self.active_cfg, level_cfg_override)
+        # Build the next config from the base config + requested level config,
+        # carrying over only the active player block (so other sections don't leak between levels).
+        base_cfg = deep_merge({}, self.base_cfg)
+        active_player_cfg = self.active_cfg.get("player", {})
+        if isinstance(active_player_cfg, dict):
+            base_player_cfg = base_cfg.get("player", {}) if isinstance(base_cfg.get("player"), dict) else {}
+            base_cfg["player"] = deep_merge(base_player_cfg, active_player_cfg)
+
+        merged_cfg = deep_merge(base_cfg, level_cfg_override)
         return resolved, merged_cfg, level_cfg_override
 
     def _apply_active_config(
