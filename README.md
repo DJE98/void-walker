@@ -68,6 +68,7 @@ Retro‑futuristic, hostile, playful in presentation, ruthless in consequence. T
 ## Configuration (`config.json`)
 ### Key sections
 - `tile_size`: pixel size of a tile
+- `debug`: `true/false` to turn verbose terminal logging on (DEBUG) or keep output minimal (WARNING)
 - `window`: width/height/title/bg/grid color
 - `fullscreen`: `true/false` to start in fullscreen; toggle at runtime via `F11` (or `F`)
 - `render`: rendering tweaks

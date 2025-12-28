@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any, Dict, List
 
@@ -7,6 +8,9 @@ import pygame
 
 from models import PlayerConfig, UpgradesConfig
 from utils import clamp_float
+
+
+logger = logging.getLogger(__name__)
 
 _OP_RE = re.compile(r"^(up|down)(\d+)?$")
 
@@ -67,7 +71,7 @@ class Player:
         - "upgrade" -> increment upgrade level (clamped)
         """
         for key, value in patch.items():
-            print(f"[patch-debug] got {key} -> {value}")
+            logger.debug("patch received %s -> %s", key, value)
 
             # Upgrade operations: {"high_jump": "upgrade"}
             if isinstance(value, str) and value.strip().lower() == "upgrade":
@@ -119,22 +123,22 @@ class Player:
         self, upgrade_name: str, upgrades_cfg: dict[str, Any]
     ) -> None:
         if upgrade_name not in upgrades_cfg:
-            print("[upgrade-debug] upgrade name not in config")
+            logger.debug("upgrade name not in config: %s", upgrade_name)
             return
         max_level = int(upgrades_cfg[upgrade_name].get("max_level", 0))
         current = int(self.cfg.upgrades.get(upgrade_name, 0))
         self.cfg.upgrades[upgrade_name] = min(max_level, current + 1)
-        print(f"[upgrade-debug] upgrade {upgrade_name} to {min(max_level, current + 1)}")
+        logger.debug("upgrade %s to %s", upgrade_name, min(max_level, current + 1))
 
     def _downgrade_one_level(
         self, upgrade_name: str, upgrades_cfg: dict[str, Any]
     ) -> None:
         if upgrade_name not in upgrades_cfg:
-            print("[downgrade-debug] downgrade name not in config")
+            logger.debug("downgrade name not in config: %s", upgrade_name)
             return
         current = int(self.cfg.upgrades.get(upgrade_name, 0))
         self.cfg.upgrades[upgrade_name] = max(0, current - 1)
-        print(f"[downgrade-debug] downgrade {upgrade_name} to {max(0, current - 1)}")
+        logger.debug("downgrade %s to %s", upgrade_name, max(0, current - 1))
         # push back on hurt
         if upgrade_name == "extra_live":
             self.vel.x = self.vel.x * -1.0
@@ -160,7 +164,7 @@ class Player:
             solids: Solid tile rects in world coordinates.
         """
         if self.cfg.upgrades["extra_live"] <= 0:
-            print(f"player died with {self.cfg.upgrades['extra_live']} lives")
+            logger.info("player died with %s lives", self.cfg.upgrades["extra_live"])
             return
 
         self._update_horizontal_velocity(keys)
@@ -195,7 +199,7 @@ class Player:
             level = int(self.cfg.upgrades.get("high_jump", 0))
             level_score = self.upgrades_cfg.high_jump.level
             level = max(0, min(level, len(level_score) - 1))
-            print(f"jump level {level} / {level_score[level]}")
+            logger.debug("jump level %s / %s", level, level_score[level])
             effective_jump_strength = float(level_score[level])
             self.vel.y = -effective_jump_strength
             self.on_ground = False

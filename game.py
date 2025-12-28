@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -18,13 +19,17 @@ from utils import apply_color_mode, as_color, deep_get, deep_merge
 from game_types import Color
 
 
+logger = logging.getLogger(__name__)
+
+
 class Game:
     """Top-level game orchestration (loading, loop, update, render)."""
 
     def __init__(self, glob_cfg_path: Path) -> None:
-        self.debug_consumption = True
         self.cfg_path = Path(glob_cfg_path)
         self.base_cfg = load_json_config(self.cfg_path)
+        self.debug_enabled = False
+        self._set_debug_mode(bool(self.base_cfg.get("debug", False)))
         self.active_cfg = deep_merge({}, self.base_cfg)   # current merged level cfg
         self.levels_dir = Path(self.active_cfg.get("levels_dir", "levels"))
         self.current_level_name = str(self.active_cfg.get("currentLevel", "Level1"))
@@ -67,6 +72,24 @@ class Game:
 
         self.camera = pygame.Vector2(0, 0)
 
+    def _configure_logging(self, debug_enabled: bool) -> None:
+        """Configure root logging level based on debug flag."""
+        level = logging.DEBUG if debug_enabled else logging.WARNING
+        root_logger = logging.getLogger()
+        if not root_logger.handlers:
+            logging.basicConfig(
+                level=level,
+                format="%(levelname)s:%(name)s:%(message)s",
+            )
+        root_logger.setLevel(level)
+        for handler in root_logger.handlers:
+            handler.setLevel(level)
+
+    def _set_debug_mode(self, enabled: bool) -> None:
+        """Toggle debug flags and logging configuration."""
+        self.debug_enabled = bool(enabled)
+        self._configure_logging(self.debug_enabled)
+
     # ----------------------------
     # Initialization
     # ----------------------------
@@ -103,6 +126,7 @@ class Game:
     def _restart_game(self) -> None:
         """Fully restart the game state from disk config (master + start level)."""
         self.base_cfg = load_json_config(self.cfg_path)
+        self._set_debug_mode(bool(self.base_cfg.get("debug", False)))
         self.active_cfg = deep_merge({}, self.base_cfg)
         self.levels_dir = Path(self.active_cfg.get("levels_dir", "levels"))
         start_level = str(self.active_cfg.get("currentLevel", "Level1"))
@@ -162,6 +186,7 @@ class Game:
         self, cfg: Dict[str, Any], is_initial: bool = False
     ) -> None:
         """Apply merged config for the current level."""
+        self._set_debug_mode(bool(cfg.get("debug", False)))
         self.active_cfg = cfg
         self.tile_size = int(cfg.get("tile_size", 48))
         self.color_mode = self._parse_color_mode(cfg)
@@ -381,9 +406,12 @@ class Game:
         self._update_music_settings()
         self._update_music_playlist()
 
-        # debug
-        if getattr(self, "debug_consumption", False):
-            print(f"[run-debug] switched to {name} | score={self.player.score} | upgrades={self.player.cfg.upgrades}")
+        logger.debug(
+            "switched to %s | score=%s | upgrades=%s",
+            name,
+            self.player.score,
+            self.player.cfg.upgrades,
+        )
 
 
     # ----------------------------
@@ -518,15 +546,10 @@ class Game:
         if tx < 0 or tx >= len(row):
             return
 
-        self._dbg(f"set_level_char at tx={tx}, ty={ty}")
+        logger.debug("set_level_char at tx=%s, ty=%s", tx, ty)
         row_list = list(row)
         row_list[tx] = new_char
         self.level.grid[ty] = "".join(row_list)
-
-    def _dbg(self, msg: str) -> None:
-        # Toggle by setting self.debug_consumption = True somewhere (e.g. in __init__)
-        if getattr(self, "debug_consumption", False):
-            print(f"[consume-debug] {msg}")
 
     def _legend_entry_for_char(self, ch: str) -> Dict[str, Any]:
         legend = self.active_cfg.get("legend", {})
@@ -564,7 +587,7 @@ class Game:
         row_list[tx] = new_char
         self.level.grid[ty] = "".join(row_list)
 
-        self._dbg(f"tile changed at (tx={tx}, ty={ty}): '{old_char}' -> '{new_char}'")
+        logger.debug("tile changed at (tx=%s, ty=%s): '%s' -> '%s'", tx, ty, old_char, new_char)
 
     # ----------------------------
     # Events / loop
